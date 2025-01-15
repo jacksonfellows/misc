@@ -1,0 +1,11 @@
+H = 10
+a = 0.5
+
+u_range = (0, 2*pi)
+v_range = (0, H)
+
+---
+
+x = a*cos(u)
+y = a*sin(u)
+z = v

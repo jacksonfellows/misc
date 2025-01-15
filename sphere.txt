@@ -1,0 +1,10 @@
+u_range = (0, 2*pi)
+v_range = (0, 2*pi)
+
+---
+
+a = 0.3
+
+x = a*cos(u)*sin(v)
+y = a*sin(u)*sin(v)
+z = a*cos(v)

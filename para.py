@@ -1,3 +1,4 @@
+import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial import Delaunay
@@ -5,7 +6,7 @@ from stl import mesh
 import argparse
 
 p = argparse.ArgumentParser()
-p.add_argument("filename")
+p.add_argument("filename", type=pathlib.Path)
 p.add_argument("-n", type=int, default=100)
 args = p.parse_args()
 
@@ -29,4 +30,4 @@ for i, f in enumerate(tri.simplices):
         m.vectors[i][j][1] = L["y"][f[j]]
         m.vectors[i][j][2] = L["z"][f[j]]
 
-m.save('para.stl')
+m.save(f"{args.filename.stem}.stl")
