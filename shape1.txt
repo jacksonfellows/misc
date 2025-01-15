@@ -1,0 +1,8 @@
+u_range = (0, 2*pi)
+v_range = (0, 2*pi)
+
+---
+
+x = sin(8*v)/16+((13/10)+sin(u))*cos(v)
+y = sin(8*v)/16+(2/3)*cos(u)+((13/10)+sin(u))*sin(v)
+z = sin(8*v)/16+sin(100*v)/100-sin(3*u)/10+cos(u)
