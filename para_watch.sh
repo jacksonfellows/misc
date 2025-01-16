@@ -1,0 +1,1 @@
+watchmedo shell-command --patterns='*.txt' --command='python para.py ${watch_src_path} -n 100' .
