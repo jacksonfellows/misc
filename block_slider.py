@@ -4,17 +4,23 @@ from scipy.integrate import solve_ivp
 
 m = 1  # mass
 k = 1  # spring constant
-mu = 0.2  # coefficient of friction
 g = 10 # gravity
-eta = 5  # initial position of spring
+eta = 8  # initial position of spring
 v = 1 # velocity of spring
-x0 = 5 # spring len
+x0 = 8 # spring len
+
+# coefficient of friction depends on velocity of block
+def mu(u_):
+    if u_ <= 0:
+        return 0.3 # static friction
+    else:
+        return 0.1 # dynamic friction
 
 # Define the system of ODEs.
 def system(t, y):
     u, u_ = y
     f = k*(eta + v*t - x0 - u) # Spring force
-    tau = mu*m*g # drag force
+    tau = mu(u_)*m*g # drag force
     if tau >= abs(f):
         u__ = 0
     elif f > 0:
