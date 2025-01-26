@@ -59,7 +59,12 @@ ax.plot(t, u_, label='$\dot{u}$')
 ax.set_xlabel('$t$')
 ax.legend()
 
-u_marker, = ax.plot([], [], "rs")
+tax = ax.twinx()
+tax.plot(t, np.vectorize(mu)(u_), label='$\mu$', color="green")
+tax.legend()
+
+
+t_marker, = ax.plot([], [], "r-")
 
 # Animation settings
 ax = figs[1].subplots()
@@ -79,7 +84,7 @@ num_coils = 4
 # Function to initialize the animation
 def init():
     # spring.set_data([], [])
-    return spring, mass, end, u_marker
+    return spring, mass, end, t_marker
 
 N = 1000
 y = 0.1 * np.sin(2*np.pi*num_coils*np.linspace(0, 1, N))
@@ -93,8 +98,8 @@ def update(frame):
     spring.set_data(x, y)
     mass.set_data([x_start], [0])
     end.set_data([x_end], [0])
-    u_marker.set_data([t[frame]], [u[frame]])
-    return spring, mass, end, u_marker
+    t_marker.set_data([t[frame], t[frame]], [u.min(), u.max()])
+    return spring, mass, end, t_marker
 
 # Create the animation
 ani = FuncAnimation(figs[1], update, frames=len(t), init_func=init, blit=True, interval=20)
