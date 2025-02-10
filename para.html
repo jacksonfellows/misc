@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parametric shape editor</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow-y: hidden;
+            height: 100%;
+            width: 100%;
+        }
+        #main {
+            display: grid;
+            grid-template-columns: 30% 70%;
+            height: 100vh;
+        }
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #inp {
+            width: 100%;
+            height: 100%;
+            font-family: monospace;
+            font-size: 14pt;
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
+        #menu {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <select id="programSelector"></select>
+    </div>
+    <div id="main">
+        <div id="left">
+            <textarea id="inp"></textarea>
+        </div>
+        <div id="right">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/OrbitControls.js';
+        
+        // Set up scene, camera, and renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        const camera = new THREE.PerspectiveCamera(75, 2, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({canvas: document.getElementById("canvas")});
+        
+        // Load functions and variables from Math (idk how to do this dynamically).
+        let abs = Math.abs;
+        let acos = Math.acos;
+        let acosh = Math.acosh;
+        let asin = Math.asin;
+        let asinh = Math.asinh;
+        let atan = Math.atan;
+        let atanh = Math.atanh;
+        let atan2 = Math.atan2;
+        let ceil = Math.ceil;
+        let cbrt = Math.cbrt;
+        let expm1 = Math.expm1;
+        let clz32 = Math.clz32;
+        let cos = Math.cos;
+        let cosh = Math.cosh;
+        let exp = Math.exp;
+        let floor = Math.floor;
+        let fround = Math.fround;
+        let hypot = Math.hypot;
+        let imul = Math.imul;
+        let log = Math.log;
+        let log1p = Math.log1p;
+        let log2 = Math.log2;
+        let log10 = Math.log10;
+        let max = Math.max;
+        let min = Math.min;
+        let pow = Math.pow;
+        let random = Math.random;
+        let round = Math.round;
+        let sign = Math.sign;
+        let sin = Math.sin;
+        let sinh = Math.sinh;
+        let sqrt = Math.sqrt;
+        let tan = Math.tan;
+        let tanh = Math.tanh;
+        let trunc = Math.trunc;
+        let E = Math.E;
+        let LN10 = Math.LN10;
+        let LN2 = Math.LN2;
+        let LOG10E = Math.LOG10E;
+        let LOG2E = Math.LOG2E;
+        let PI = Math.PI;
+        let SQRT1_2 = Math.SQRT1_2;
+        let SQRT2 = Math.SQRT2;
+        
+        // Define shape.
+        let MODE = "uv";
+        let x = null;
+        let y = null;
+        let z = null;
+        let du = null;
+        let dv = null;
+        let u_range = null;
+        let v_range = null;
+        let inp = document.getElementById("inp");
+        let t = 0;
+        let prelude = `// Variables and functions from Math are available. Don't use let, const, or var to define settings or x,y,z.
+
+// Settings
+u_range = [0, 2*PI];
+v_range = [0, 2*PI];
+du = 0.05*PI;
+dv = 0.05*PI;
+MODE = 'uv'; // ('uv' => lines of constant u, 'vu' => lines of constant v)
+
+// Define shape -- t is the time in seconds`;
+        
+        let shape_valid = false;
+        
+        function def_shape() {
+            try {
+                eval(inp.value);
+                if (du === 0 || dv === 0) {
+                    throw "du and dv must be non-zero.";
+                }
+                if (MODE !== "uv" && MODE !== "vu") {
+                    throw "MODE not one of 'uv' or 'vu'";
+                }
+                shape_valid = true;
+            } catch (e) {
+                console.log("Error defining shape program:", e);
+                shape_valid = false;
+            }
+        }
+        
+        function render_shape() {
+            scene.clear();
+            if (shape_valid) {
+                try {
+                    // Render lines of constant u.
+                    const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+                    if (MODE === "uv") {
+                        for (let u = u_range[0]; u <= u_range[1]; u += du) {
+                            const points = [];
+                            for (let v = v_range[0]; v <= v_range[1]; v += dv) {
+                                points.push(new THREE.Vector3(x(u,v), y(u,v), z(u,v)));
+                            }
+                            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                            const line = new THREE.Line(geometry, material);
+                            scene.add(line);
+                        }
+                    } else if (MODE === "vu") {
+                        for (let v = v_range[0]; v <= v_range[1]; v += dv) {
+                            const points = [];
+                            for (let u = u_range[0]; u <= u_range[1]; u += du) {
+                                points.push(new THREE.Vector3(x(u,v), y(u,v), z(u,v)));
+                            }
+                            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                            const line = new THREE.Line(geometry, material);
+                            scene.add(line);
+                        }
+                    }
+                } catch (e) {
+                    console.log("Error evaling shape:", e);
+                }
+            }
+        }
+        
+        inp.oninput = def_shape;
+        
+        // Set camera position
+        camera.position.x = 3;
+        camera.position.z = 3;
+        
+        // Add orbit controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Animation loop
+        function animate(tt) {
+            let width = renderer.domElement.clientWidth;
+            let height = renderer.domElement.clientHeight;
+            renderer.setSize(width, height, false);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            
+            t = tt/1000;
+            render_shape();
+            
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Example programs
+        const programs = {
+            "sphere": `${prelude}
+x = (u,v) => cos(u)*sin(v);
+y = (u,v) => sin(u)*sin(v);
+z = (u,v) => cos(v)*(2*sin(t)*sin(t)+0.2)`,
+            "torus": `${prelude}
+x = (u,v) => (1 + 0.3*cos(u))*cos(v);
+y = (u,v) => (1 + 0.3*cos(u))*sin(v);
+z = (u,v) => 0.3*sin(u) + sin(((1+0.3*cos(u))*sin(v))*6 + 4*t)/5;`,
+            "blob": `// Variables and functions from Math are available. Don't use let, const, or var to define settings or x,y,z.
+// Settings
+u_range = [0, 2*PI];
+v_range = [0, PI];
+du = 0.05*PI;
+dv = 0.02*PI;
+MODE = 'vu'; // ('uv' => lines of constant u, 'vu' => lines of constant v)
+
+// Define shape -- t is the time in seconds
+x = (u,v) => cos(u)*sin(v) +
+cos(sin(u)*sin(v)*5 + t*10)/20;
+y = (u,v) => sin(u)*sin(v);
+z = (u,v) => cos(v) + sin(sin(u)*sin(v)*5 + t*10)/20;`
+        };
+
+        let programSelector = document.getElementById("programSelector");
+
+        // Populate the dropdown menu
+        for (let program in programs) {
+            let option = document.createElement("option");
+            option.value = program;
+            option.text = program.charAt(0).toUpperCase() + program.slice(1);
+            programSelector.appendChild(option);
+        }
+
+        programSelector.addEventListener("change", (event) => {
+            inp.value = programs[event.target.value];
+            def_shape();
+        });
+        inp.value = programs[programSelector.value];
+        def_shape();
+
+        animate();
+    </script>
+</body>
+</html>
