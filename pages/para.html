@@ -114,16 +114,6 @@
         let v_range = null;
         let inp = document.getElementById("inp");
         let t = 0;
-        let prelude = `// Variables and functions from Math are available. Don't use let, const, or var to define settings or x,y,z.
-
-// Settings
-u_range = [0, 2*PI];
-v_range = [0, 2*PI];
-du = 0.05*PI;
-dv = 0.05*PI;
-MODE = 'uv'; // ('uv' => lines of constant u, 'vu' => lines of constant v)
-
-// Define shape -- t is the time in seconds`;
         
         let shape_valid = false;
         
@@ -205,14 +195,6 @@ MODE = 'uv'; // ('uv' => lines of constant u, 'vu' => lines of constant v)
 
         // Example programs
         const programs = {
-            "sphere": `${prelude}
-x = (u,v) => cos(u)*sin(v);
-y = (u,v) => sin(u)*sin(v);
-z = (u,v) => cos(v)*(2*sin(t)*sin(t)+0.2)`,
-            "torus": `${prelude}
-x = (u,v) => (1 + 0.3*cos(u))*cos(v);
-y = (u,v) => (1 + 0.3*cos(u))*sin(v);
-z = (u,v) => 0.3*sin(u) + sin(((1+0.3*cos(u))*sin(v))*6 + 4*t)/5;`,
             "blob": `// Variables and functions from Math are available. Don't use let, const, or var to define settings or x,y,z.
 // Settings
 u_range = [0, 2*PI];
@@ -225,7 +207,46 @@ MODE = 'vu'; // ('uv' => lines of constant u, 'vu' => lines of constant v)
 x = (u,v) => cos(u)*sin(v) +
 cos(sin(u)*sin(v)*5 + t*10)/20;
 y = (u,v) => sin(u)*sin(v);
-z = (u,v) => cos(v) + sin(sin(u)*sin(v)*5 + t*10)/20;`
+z = (u,v) => cos(v) + sin(sin(u)*sin(v)*5 + t*10)/20;`,
+            "sphere": `// Variables and functions from Math are available. Don't use let, const, or var to define settings or x,y,z.
+
+// Settings
+u_range = [0, 2*PI];
+v_range = [0, 2*PI];
+du = 0.05*PI;
+dv = 0.05*PI;
+MODE = 'uv'; // ('uv' => lines of constant u, 'vu' => lines of constant v)
+
+// Define shape -- t is the time in seconds
+x = (u,v) => cos(u)*sin(v);
+y = (u,v) => sin(u)*sin(v);
+z = (u,v) => cos(v)*(2*sin(t)*sin(t)+0.2);`,
+            "torus": `// Variables and functions from Math are available. Don't use let, const, or var to define settings or x,y,z.
+
+// Settings
+u_range = [0, 2*PI];
+v_range = [0, 2*PI];
+du = 0.05*PI;
+dv = 0.05*PI;
+MODE = 'uv'; // ('uv' => lines of constant u, 'vu' => lines of constant v)
+
+// Define shape -- t is the time in seconds
+x = (u,v) => (1 + 0.3*cos(u))*cos(v);
+y = (u,v) => (1 + 0.3*cos(u))*sin(v);
+z = (u,v) => 0.3*sin(u) + sin(((1+0.3*cos(u))*sin(v))*6 + 4*t)/5;`,
+            "mobius strip": `// Variables and functions from Math are available. Don't use let, const, or var to define settings or x,y,z.
+
+// Settings
+u_range = [0, 2*PI];
+v_range = [-1, 1];
+du = 0.02*PI;
+dv = 0.1;
+MODE = 'vu'; // ('uv' => lines of constant u, 'vu' => lines of constant v)
+
+// Define shape -- t is the time in seconds
+x = (u,v) => cos(u)*(3 + v*cos(u/2))/2;
+y = (u,v) => sin(u)*(3 + v*cos(u/2))/2;
+z = (u,v) => v*sin(u/2)/2 + sin(sin(u)*(3 + v*cos(u/2))*3 + 5*t)/14;`,       
         };
 
         let programSelector = document.getElementById("programSelector");
