@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv run
 # /// script
-# requires-python = "==3.12"
+# requires-python = "==3.12.*"
 # dependencies = [
 #     "llm",
 #     "llm-anthropic",
@@ -38,7 +38,7 @@ def main(prompt, model):
         sys.exit(1)
 
     if len(commands) > 1:
-        print("Response contained multiple shell commands which not currently supported.")
+        print("Response contained multiple shell commands which is not currently supported.")
         sys.exit(1)
 
     cmd = commands[0]
