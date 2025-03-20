@@ -36,12 +36,12 @@
             align-items: center;
             margin-bottom: 5px;
         }
-        
+
         .controls label math {
             font-size: 16px;
             vertical-align: middle;
         }
-        
+
         .controls input[type="number"] {
             width: 60px;
             background-color: rgba(255, 255, 255, 0.1);
@@ -141,7 +141,10 @@
     <div class="controls">
         <label for="A1">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
-                <msub><mi>A</mi><mn>1</mn></msub>
+                <msub>
+                    <mi>A</mi>
+                    <mn>1</mn>
+                </msub>
             </math>:
             <input type="number" id="A1_input" min="0" max="0.5" step="0.01" value="0.4">
         </label>
@@ -151,7 +154,10 @@
 
         <label for="f1">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
-                <msub><mi>f</mi><mn>1</mn></msub>
+                <msub>
+                    <mi>f</mi>
+                    <mn>1</mn>
+                </msub>
             </math>:
             <input type="number" id="f1_input" min="0" max="10" step="0.01" value="10">
         </label>
@@ -161,17 +167,23 @@
 
         <label for="phase1">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
-                <msub><mtext>phase</mtext><mn>1</mn></msub>
+                <msub>
+                    <mtext>phase</mtext>
+                    <mn>1</mn>
+                </msub>
             </math>:
-            <input type="number" id="phase1_input" min="0" max="359" step="1" value="0">
+            <input type="number" id="phase1_input" min="0" max="359" step="1" value="180">
         </label>
         <div class="slider-container">
-            <input type="range" id="phase1" min="0" max="359" step="1" value="0">
+            <input type="range" id="phase1" min="0" max="359" step="1" value="180">
         </div>
 
         <label for="A2">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
-                <msub><mi>A</mi><mn>2</mn></msub>
+                <msub>
+                    <mi>A</mi>
+                    <mn>2</mn>
+                </msub>
             </math>:
             <input type="number" id="A2_input" min="0" max="0.5" step="0.01" value="0.4">
         </label>
@@ -181,7 +193,10 @@
 
         <label for="f2">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
-                <msub><mi>f</mi><mn>2</mn></msub>
+                <msub>
+                    <mi>f</mi>
+                    <mn>2</mn>
+                </msub>
             </math>:
             <input type="number" id="f2_input" min="0" max="10" step="0.01" value="4">
         </label>
@@ -191,12 +206,15 @@
 
         <label for="phase2">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
-                <msub><mtext>phase</mtext><mn>2</mn></msub>
+                <msub>
+                    <mtext>phase</mtext>
+                    <mn>2</mn>
+                </msub>
             </math>:
-            <input type="number" id="phase2_input" min="0" max="359" step="1" value="180">
+            <input type="number" id="phase2_input" min="0" max="359" step="1" value="0">
         </label>
         <div class="slider-container">
-            <input type="range" id="phase2" min="0" max="359" step="1" value="180">
+            <input type="range" id="phase2" min="0" max="359" step="1" value="0">
         </div>
 
         <label for="winding_f">
@@ -291,7 +309,7 @@
                 
                 void main() {
                     float x = aXPosition;
-                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*sin(x*2.*PI*u_f2 + u_phase2*PI/180.);
+                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.);
 
                     float screen_x = 2.*x - 1.; // [0,1] -> [-1,1]
                     float screen_y = 0.5*y + 0.5; // [-1,1] -> [0,1]
@@ -323,7 +341,7 @@
                 
                 void main() {
                     float x = aXPosition;
-                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*sin(x*2.*PI*u_f2 + u_phase2*PI/180.);
+                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.);
 
                     // wind (TODO fix N & k)
                     float N = 1000.;
@@ -457,12 +475,12 @@
             const winding_f_input = document.getElementById('winding_f_input');
 
             let A1 = parseFloat(A1_slider.value);
-            let f1 = 10; // parseFloat(f1_slider.value);
+            let f1 = parseFloat(f1_slider.value);
             let A2 = parseFloat(A2_slider.value);
-            let f2 = 4; // parseFloat(f2_slider.value);
+            let f2 = parseFloat(f2_slider.value);
             let phase1 = parseFloat(phase1_slider.value);
             let phase2 = parseFloat(phase2_slider.value);
-            let winding_f = 4; // parseFloat(winding_f_slider.value);
+            let winding_f = parseFloat(winding_f_slider.value);
 
             // Function to update values from sliders
             function updateFromSlider(slider, input, value, precision = 2) {
@@ -482,48 +500,48 @@
             }
 
             // Add event listeners for sliders
-            A1_slider.addEventListener('input', function() {
+            A1_slider.addEventListener('input', function () {
                 A1 = updateFromSlider(this, A1_input, A1);
             });
-            f1_slider.addEventListener('input', function() {
+            f1_slider.addEventListener('input', function () {
                 f1 = updateFromSlider(this, f1_input, f1);
             });
-            A2_slider.addEventListener('input', function() {
+            A2_slider.addEventListener('input', function () {
                 A2 = updateFromSlider(this, A2_input, A2);
             });
-            f2_slider.addEventListener('input', function() {
+            f2_slider.addEventListener('input', function () {
                 f2 = updateFromSlider(this, f2_input, f2);
             });
-            phase1_slider.addEventListener('input', function() {
+            phase1_slider.addEventListener('input', function () {
                 phase1 = updateFromSlider(this, phase1_input, phase1, 0);
             });
-            phase2_slider.addEventListener('input', function() {
+            phase2_slider.addEventListener('input', function () {
                 phase2 = updateFromSlider(this, phase2_input, phase2, 0);
             });
-            winding_f_slider.addEventListener('input', function() {
+            winding_f_slider.addEventListener('input', function () {
                 winding_f = updateFromSlider(this, winding_f_input, winding_f);
             });
 
             // Add event listeners for text inputs - using input event for immediate updates
-            A1_input.addEventListener('input', function() {
+            A1_input.addEventListener('input', function () {
                 A1 = updateFromInput(this, A1_slider, 0, 0.5, A1);
             });
-            f1_input.addEventListener('input', function() {
+            f1_input.addEventListener('input', function () {
                 f1 = updateFromInput(this, f1_slider, 0, 10, f1);
             });
-            A2_input.addEventListener('input', function() {
+            A2_input.addEventListener('input', function () {
                 A2 = updateFromInput(this, A2_slider, 0, 0.5, A2);
             });
-            f2_input.addEventListener('input', function() {
+            f2_input.addEventListener('input', function () {
                 f2 = updateFromInput(this, f2_slider, 0, 10, f2);
             });
-            phase1_input.addEventListener('input', function() {
+            phase1_input.addEventListener('input', function () {
                 phase1 = updateFromInput(this, phase1_slider, 0, 359, phase1);
             });
-            phase2_input.addEventListener('input', function() {
+            phase2_input.addEventListener('input', function () {
                 phase2 = updateFromInput(this, phase2_slider, 0, 359, phase2);
             });
-            winding_f_input.addEventListener('input', function() {
+            winding_f_input.addEventListener('input', function () {
                 winding_f = updateFromInput(this, winding_f_slider, 0, 10, winding_f);
             });
 
