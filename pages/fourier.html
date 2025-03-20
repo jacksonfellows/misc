@@ -153,10 +153,10 @@
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
                 <msub><mi>f</mi><mn>1</mn></msub>
             </math>:
-            <input type="number" id="f1_input" min="0" max="10" step="0.01" value="1">
+            <input type="number" id="f1_input" min="0" max="10" step="0.01" value="10">
         </label>
         <div class="slider-container">
-            <input type="range" id="f1" min="0" max="10" step="0.01" value="1">
+            <input type="range" id="f1" min="0" max="10" step="0.01" value="10">
         </div>
 
         <label for="phase1">
@@ -183,10 +183,10 @@
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
                 <msub><mi>f</mi><mn>2</mn></msub>
             </math>:
-            <input type="number" id="f2_input" min="0" max="10" step="0.01" value="3">
+            <input type="number" id="f2_input" min="0" max="10" step="0.01" value="4">
         </label>
         <div class="slider-container">
-            <input type="range" id="f2" min="0" max="10" step="0.01" value="3">
+            <input type="range" id="f2" min="0" max="10" step="0.01" value="4">
         </div>
 
         <label for="phase2">
@@ -205,10 +205,10 @@
                 <mo>&#x2009;</mo>
                 <mi>f</mi>
             </math>:
-            <input type="number" id="winding_f_input" min="0" max="10" step="0.01" value="3">
+            <input type="number" id="winding_f_input" min="0" max="10" step="0.01" value="4">
         </label>
         <div class="slider-container">
-            <input type="range" id="winding_f" min="0" max="10" step="0.01" value="3">
+            <input type="range" id="winding_f" min="0" max="10" step="0.01" value="4">
         </div>
     </div>
 
@@ -457,12 +457,12 @@
             const winding_f_input = document.getElementById('winding_f_input');
 
             let A1 = parseFloat(A1_slider.value);
-            let f1 = parseFloat(f1_slider.value);
+            let f1 = 10; // parseFloat(f1_slider.value);
             let A2 = parseFloat(A2_slider.value);
-            let f2 = parseFloat(f2_slider.value);
+            let f2 = 4; // parseFloat(f2_slider.value);
             let phase1 = parseFloat(phase1_slider.value);
             let phase2 = parseFloat(phase2_slider.value);
-            let winding_f = parseFloat(winding_f_slider.value);
+            let winding_f = 4; // parseFloat(winding_f_slider.value);
 
             // Function to update values from sliders
             function updateFromSlider(slider, input, value, precision = 2) {
