@@ -35,6 +35,11 @@
             display: block;
             margin-bottom: 5px;
         }
+        
+        .controls label math {
+            font-size: 16px;
+            vertical-align: middle;
+        }
 
         .controls input {
             margin-bottom: 10px;
@@ -118,25 +123,55 @@
         </math>
     </div>
     <div class="controls">
-        <label for="A1">A1: <span id="A1_value">0.40</span></label>
+        <label for="A1">
+            <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+                <msub><mi>A</mi><mn>1</mn></msub>
+            </math>: <span id="A1_value">0.40</span>
+        </label>
         <input type="range" id="A1" min="0" max="0.5" step="0.01" value="0.4">
 
-        <label for="f1">f1: <span id="f1_value">1.00</span></label>
+        <label for="f1">
+            <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+                <msub><mi>f</mi><mn>1</mn></msub>
+            </math>: <span id="f1_value">1.00</span>
+        </label>
         <input type="range" id="f1" min="0" max="10" step="0.01" value="1">
 
-        <label for="phase1">phase1: <span id="phase1_value">0</span></label>
+        <label for="phase1">
+            <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+                <msub><mtext>phase</mtext><mn>1</mn></msub>
+            </math>: <span id="phase1_value">0</span>
+        </label>
         <input type="range" id="phase1" min="0" max="359" step="1" value="0">
 
-        <label for="A2">A2: <span id="A2_value">0.40</span></label>
+        <label for="A2">
+            <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+                <msub><mi>A</mi><mn>2</mn></msub>
+            </math>: <span id="A2_value">0.40</span>
+        </label>
         <input type="range" id="A2" min="0" max="0.5" step="0.01" value="0.4">
 
-        <label for="f2">f2: <span id="f2_value">3.00</span></label>
+        <label for="f2">
+            <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+                <msub><mi>f</mi><mn>2</mn></msub>
+            </math>: <span id="f2_value">3.00</span>
+        </label>
         <input type="range" id="f2" min="0" max="10" step="0.01" value="3">
 
-        <label for="phase2">phase2: <span id="phase2_value">180</span></label>
+        <label for="phase2">
+            <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+                <msub><mtext>phase</mtext><mn>2</mn></msub>
+            </math>: <span id="phase2_value">180</span>
+        </label>
         <input type="range" id="phase2" min="0" max="359" step="1" value="180">
 
-        <label for="winding_f">winding f: <span id="winding_f_value">3.00</span></label>
+        <label for="winding_f">
+            <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+                <mtext>winding</mtext>
+                <mo>&#x2009;</mo>
+                <mi>f</mi>
+            </math>: <span id="winding_f_value">3.00</span>
+        </label>
         <input type="range" id="winding_f" min="0" max="10" step="0.01" value="3">
     </div>
 
