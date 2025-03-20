@@ -503,26 +503,26 @@
                 winding_f = updateFromSlider(this, winding_f_input, winding_f);
             });
 
-            // Add event listeners for text inputs
-            A1_input.addEventListener('change', function() {
+            // Add event listeners for text inputs - using input event for immediate updates
+            A1_input.addEventListener('input', function() {
                 A1 = updateFromInput(this, A1_slider, 0, 0.5, A1);
             });
-            f1_input.addEventListener('change', function() {
+            f1_input.addEventListener('input', function() {
                 f1 = updateFromInput(this, f1_slider, 0, 10, f1);
             });
-            A2_input.addEventListener('change', function() {
+            A2_input.addEventListener('input', function() {
                 A2 = updateFromInput(this, A2_slider, 0, 0.5, A2);
             });
-            f2_input.addEventListener('change', function() {
+            f2_input.addEventListener('input', function() {
                 f2 = updateFromInput(this, f2_slider, 0, 10, f2);
             });
-            phase1_input.addEventListener('change', function() {
+            phase1_input.addEventListener('input', function() {
                 phase1 = updateFromInput(this, phase1_slider, 0, 359, phase1);
             });
-            phase2_input.addEventListener('change', function() {
+            phase2_input.addEventListener('input', function() {
                 phase2 = updateFromInput(this, phase2_slider, 0, 359, phase2);
             });
-            winding_f_input.addEventListener('change', function() {
+            winding_f_input.addEventListener('input', function() {
                 winding_f = updateFromInput(this, winding_f_slider, 0, 10, winding_f);
             });
 
