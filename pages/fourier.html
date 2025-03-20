@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fourier Transform Visualization</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: black;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .controls label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .controls input {
+            margin-bottom: 10px;
+            width: 300px;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="controls">
+        <label for="A1">A1: <span id="A1_value">0.40</span></label>
+        <input type="range" id="A1" min="0" max="0.5" step="0.01" value="0.4">
+
+        <label for="f1">f1: <span id="f1_value">1.00</span></label>
+        <input type="range" id="f1" min="0" max="10" step="0.01" value="1">
+
+        <label for="phase1">phase1: <span id="phase1_value">0</span></label>
+        <input type="range" id="phase1" min="0" max="359" step="1" value="0">
+
+        <label for="A2">A2: <span id="A2_value">0.40</span></label>
+        <input type="range" id="A2" min="0" max="0.5" step="0.01" value="0.4">
+
+        <label for="f2">f2: <span id="f2_value">3.00</span></label>
+        <input type="range" id="f2" min="0" max="10" step="0.01" value="3">
+
+        <label for="phase2">phase2: <span id="phase2_value">180</span></label>
+        <input type="range" id="phase2" min="0" max="359" step="1" value="180">
+
+        <label for="winding_f">winding f: <span id="winding_f_value">3.00</span></label>
+        <input type="range" id="winding_f" min="0" max="10" step="0.01" value="3">
+    </div>
+
+    <script>
+        function main() {
+            // Get canvas element
+            const canvas = document.getElementById('canvas');
+
+            // Get WebGL context
+            let gl = null;
+            try {
+                gl = canvas.getContext('webgl');
+                if (!gl) gl = canvas.getContext('experimental-webgl');
+            } catch (e) {
+                console.error("Error initializing WebGL:", e);
+                document.body.innerHTML = "<p style='color:white;padding:20px;'>Error initializing WebGL: " + e.message + "</p>";
+                return;
+            }
+
+            if (!gl) {
+                document.body.innerHTML = "<p style='color:white;padding:20px;'>WebGL not supported in this browser</p>";
+                return;
+            }
+
+            // Set canvas size
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+
+            // Add resize event listener
+            window.addEventListener('resize', resize);
+            resize();
+
+            viridis_def = `
+                vec4 viridis(float x) {
+                    // Convert to HSL space with constant luminance
+                    float hue = mix(0.7, 0.0, clamp(x, 0.0, 1.0)); // From blue to red (in normalized HSL)
+                    const float saturation = 0.85;
+                    const float luminance = 0.65;  // Constant luminance value
+                    
+                    // HSL to RGB conversion
+                    float chroma = (1.0 - abs(2.0 * luminance - 1.0)) * saturation;
+                    float huePrime = hue * 6.0;
+                    float x1 = chroma * (1.0 - abs(mod(huePrime, 2.0) - 1.0));
+                    
+                    vec3 rgb;
+                    if (huePrime < 1.0) rgb = vec3(chroma, x1, 0.0);
+                    else if (huePrime < 2.0) rgb = vec3(x1, chroma, 0.0);
+                    else if (huePrime < 3.0) rgb = vec3(0.0, chroma, x1);
+                    else if (huePrime < 4.0) rgb = vec3(0.0, x1, chroma);
+                    else if (huePrime < 5.0) rgb = vec3(x1, 0.0, chroma);
+                    else rgb = vec3(chroma, 0.0, x1);
+                    
+                    float lightnessAdjustment = luminance - chroma / 2.0;
+                    rgb += vec3(lightnessAdjustment);
+                    
+                    return vec4(rgb, 1.0);
+                }
+            `;
+
+            // Draw the wave
+            const vs_wave = `
+                #define PI 3.14159265
+
+                attribute float aXPosition;
+                uniform float u_aspect;
+                varying vec4 v_color;
+                        
+                uniform float u_A1;
+                uniform float u_f1;
+                uniform float u_A2;
+                uniform float u_f2;
+                uniform float u_phase1;
+                uniform float u_phase2;
+                uniform float u_winding_f; // unused
+
+                ${viridis_def}
+                
+                void main() {
+                    float x = aXPosition;
+                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.);
+
+                    float screen_x = 2.*x - 1.; // [0,1] -> [-1,1]
+                    float screen_y = 0.5*y + 0.5; // [-1,1] -> [0,1]
+                    screen_y = 0.7*screen_y + 0.3;
+                    screen_y = screen_y*0.95 - 0.025; // pad
+                    gl_Position = vec4(screen_x, screen_y, 0.0, 1.0);
+
+                    v_color = viridis(x);
+                }
+            `;
+
+            // Draw winding diagram
+            const vs_winding = `
+                #define PI 3.14159265
+
+                attribute float aXPosition;
+                uniform float u_aspect;
+                varying vec4 v_color;
+                        
+                uniform float u_A1;
+                uniform float u_f1;
+                uniform float u_A2;
+                uniform float u_f2;
+                uniform float u_phase1;
+                uniform float u_phase2;
+                uniform float u_winding_f;
+
+                ${viridis_def}
+                
+                void main() {
+                    float x = aXPosition;
+                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.);
+
+                    // wind (TODO fix N & k)
+                    float N = 1000.;
+                    float k = x*N;
+                    float j = u_winding_f;
+                    float a = (k*j)*atan(-sin(2.*PI/N), cos(2.*PI/N));
+                    float w_real = y*cos(a);
+                    float w_imag = y*sin(a);
+
+                    float screen_x = w_real;
+                    float screen_y = w_imag;
+
+                    screen_y = w_imag - 0.65;
+
+                    screen_x = 0.6*screen_x;
+                    screen_y = 0.6*screen_y;
+
+                    gl_Position = vec4(screen_x/u_aspect, screen_y, 0.0, 1.0);
+
+                    v_color = viridis(x);
+                }
+            `;
+
+            // Create shader program
+            function createShaderProgram(vsSource) {
+                // Fragment shader source
+                const fsSource = `
+                    precision mediump float;
+
+                    varying vec4 v_color;
+                    
+                    void main() {
+                        gl_FragColor = v_color;
+                    }
+                `;
+
+                // Create shaders
+                const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+                gl.shaderSource(vertexShader, vsSource);
+                gl.compileShader(vertexShader);
+
+                if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+                    console.error("Vertex shader compilation failed:", gl.getShaderInfoLog(vertexShader));
+                    return null;
+                }
+
+                const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+                gl.shaderSource(fragmentShader, fsSource);
+                gl.compileShader(fragmentShader);
+
+                if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+                    console.error("Fragment shader compilation failed:", gl.getShaderInfoLog(fragmentShader));
+                    return null;
+                }
+
+                // Create program and attach shaders
+                const shaderProgram = gl.createProgram();
+                gl.attachShader(shaderProgram, vertexShader);
+                gl.attachShader(shaderProgram, fragmentShader);
+                gl.linkProgram(shaderProgram);
+
+                // Check for errors
+                if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                    const error = gl.getProgramInfoLog(shaderProgram);
+                    console.error("Failed to link program:", error);
+                    return null;
+                }
+
+                return shaderProgram;
+            }
+
+            // Create programs
+            const waveProgram = createShaderProgram(vs_wave);
+            const windingProgram = createShaderProgram(vs_winding);
+
+            if (!waveProgram || !windingProgram) {
+                document.body.innerHTML = "<p style='color:white;padding:20px;'>Failed to create shader program</p>";
+                return;
+            }
+
+            locations = { wave: {}, winding: {} };
+
+            function init_program(shaderProgram, name) {
+                // Use shader program
+                gl.useProgram(shaderProgram);
+
+                // Get attribute and uniform locations
+                locations[name]["position"] = gl.getAttribLocation(shaderProgram, 'aXPosition');
+                locations[name]["A1"] = gl.getUniformLocation(shaderProgram, 'u_A1');
+                locations[name]["f1"] = gl.getUniformLocation(shaderProgram, 'u_f1');
+                locations[name]["A2"] = gl.getUniformLocation(shaderProgram, 'u_A2');
+                locations[name]["f2"] = gl.getUniformLocation(shaderProgram, 'u_f2');
+                locations[name]["phase1"] = gl.getUniformLocation(shaderProgram, 'u_phase1');
+                locations[name]["phase2"] = gl.getUniformLocation(shaderProgram, 'u_phase2');
+                locations[name]["winding_f"] = gl.getUniformLocation(shaderProgram, 'u_winding_f');
+                locations[name]["aspect"] = gl.getUniformLocation(shaderProgram, 'u_aspect');
+            }
+
+            init_program(waveProgram, "wave");
+            init_program(windingProgram, "winding");
+
+            // Create position buffer
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+            // Generate x positions in [0,1]
+            const NUM_POINTS = 1000;
+            const positions = [];
+            for (let i = 0; i < NUM_POINTS; i++) {
+                const x = i / NUM_POINTS;
+                positions.push(x);
+            }
+
+            // Fill buffer with positions
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // UI controls
+            const A1_slider = document.getElementById('A1');
+            const f1_slider = document.getElementById('f1');
+            const A1_value = document.getElementById('A1_value');
+            const f1_value = document.getElementById('f1_value');
+            const A2_slider = document.getElementById('A2');
+            const f2_slider = document.getElementById('f2');
+            const A2_value = document.getElementById('A2_value');
+            const f2_value = document.getElementById('f2_value');
+            const phase1_slider = document.getElementById('phase1');
+            const phase2_slider = document.getElementById('phase2');
+            const phase1_value = document.getElementById('phase1_value');
+            const phase2_value = document.getElementById('phase2_value');
+            const winding_f_slider = document.getElementById('winding_f');
+            const winding_f_value = document.getElementById('winding_f_value');
+
+            let A1 = parseFloat(A1_slider.value);
+            let f1 = parseFloat(f1_slider.value);
+            let A2 = parseFloat(A2_slider.value);
+            let f2 = parseFloat(f2_slider.value);
+            let phase1 = parseFloat(phase1_slider.value);
+            let phase2 = parseFloat(phase2_slider.value);
+            let winding_f = parseFloat(winding_f_slider.value);
+
+            A1_slider.addEventListener('input', function () {
+                A1 = parseFloat(this.value);
+                A1_value.textContent = A1.toFixed(2);
+            });
+            f1_slider.addEventListener('input', function () {
+                f1 = parseFloat(this.value);
+                f1_value.textContent = f1.toFixed(2);
+            });
+            A2_slider.addEventListener('input', function () {
+                A2 = parseFloat(this.value);
+                A2_value.textContent = A2.toFixed(2);
+            });
+            f2_slider.addEventListener('input', function () {
+                f2 = parseFloat(this.value);
+                f2_value.textContent = f2.toFixed(2);
+            });
+            phase1_slider.addEventListener('input', function () {
+                phase1 = parseFloat(this.value);
+                phase1_value.textContent = phase1.toFixed(0);
+            });
+            phase2_slider.addEventListener('input', function () {
+                phase2 = parseFloat(this.value);
+                phase2_value.textContent = phase2.toFixed(0);
+            });
+            winding_f_slider.addEventListener('input', function () {
+                winding_f = parseFloat(this.value);
+                winding_f_value.textContent = winding_f.toFixed(2);
+            });
+
+            // Draw function
+            function draw(time) {
+                // Clear canvas
+                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                for (let programName of ["wave", "winding"]) {
+                    gl.useProgram({ wave: waveProgram, winding: windingProgram }[programName]);
+                    // Update uniforms
+                    gl.uniform1f(locations[programName]["A1"], A1);
+                    gl.uniform1f(locations[programName]["f1"], f1);
+                    gl.uniform1f(locations[programName]["A2"], A2);
+                    gl.uniform1f(locations[programName]["f2"], f2);
+                    gl.uniform1f(locations[programName]["phase1"], phase1);
+                    gl.uniform1f(locations[programName]["phase2"], phase2);
+                    gl.uniform1f(locations[programName]["winding_f"], winding_f);
+                    gl.uniform1f(locations[programName]["aspect"], canvas.width / canvas.height);  // <-- set aspect ratio
+
+                    // Set up position attribute
+                    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                    gl.enableVertexAttribArray(locations[programName]["position"]);
+                    gl.vertexAttribPointer(locations[programName]["position"], 1, gl.FLOAT, false, 0, 0);
+
+                    // Draw line strip (connected line segments for smooth curve)
+                    gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
+                }
+
+                // Request next frame
+                requestAnimationFrame(draw);
+            }
+
+            // Start animation loop
+            requestAnimationFrame(draw);
+        }
+        main();
+    </script>
+</body>
+
+</html>
