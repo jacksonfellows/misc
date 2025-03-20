@@ -32,7 +32,8 @@
         }
 
         .controls label {
-            display: block;
+            display: flex;
+            align-items: center;
             margin-bottom: 5px;
         }
         
@@ -40,18 +41,7 @@
             font-size: 16px;
             vertical-align: middle;
         }
-
-        .controls .slider-container {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .controls input[type="range"] {
-            width: 300px;
-            margin-right: 10px;
-        }
-
+        
         .controls input[type="number"] {
             width: 60px;
             background-color: rgba(255, 255, 255, 0.1);
@@ -59,6 +49,17 @@
             color: white;
             padding: 3px 5px;
             border-radius: 3px;
+            margin-left: 10px;
+        }
+
+        .controls .slider-container {
+            margin-bottom: 15px;
+        }
+
+        .controls input[type="range"] {
+            width: 300px;
+            display: block;
+            margin-top: 5px;
         }
 
         .equation {
@@ -142,60 +143,60 @@
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
                 <msub><mi>A</mi><mn>1</mn></msub>
             </math>:
+            <input type="number" id="A1_input" min="0" max="0.5" step="0.01" value="0.4">
         </label>
         <div class="slider-container">
             <input type="range" id="A1" min="0" max="0.5" step="0.01" value="0.4">
-            <input type="number" id="A1_input" min="0" max="0.5" step="0.01" value="0.4">
         </div>
 
         <label for="f1">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
                 <msub><mi>f</mi><mn>1</mn></msub>
             </math>:
+            <input type="number" id="f1_input" min="0" max="10" step="0.01" value="1">
         </label>
         <div class="slider-container">
             <input type="range" id="f1" min="0" max="10" step="0.01" value="1">
-            <input type="number" id="f1_input" min="0" max="10" step="0.01" value="1">
         </div>
 
         <label for="phase1">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
                 <msub><mtext>phase</mtext><mn>1</mn></msub>
             </math>:
+            <input type="number" id="phase1_input" min="0" max="359" step="1" value="0">
         </label>
         <div class="slider-container">
             <input type="range" id="phase1" min="0" max="359" step="1" value="0">
-            <input type="number" id="phase1_input" min="0" max="359" step="1" value="0">
         </div>
 
         <label for="A2">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
                 <msub><mi>A</mi><mn>2</mn></msub>
             </math>:
+            <input type="number" id="A2_input" min="0" max="0.5" step="0.01" value="0.4">
         </label>
         <div class="slider-container">
             <input type="range" id="A2" min="0" max="0.5" step="0.01" value="0.4">
-            <input type="number" id="A2_input" min="0" max="0.5" step="0.01" value="0.4">
         </div>
 
         <label for="f2">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
                 <msub><mi>f</mi><mn>2</mn></msub>
             </math>:
+            <input type="number" id="f2_input" min="0" max="10" step="0.01" value="3">
         </label>
         <div class="slider-container">
             <input type="range" id="f2" min="0" max="10" step="0.01" value="3">
-            <input type="number" id="f2_input" min="0" max="10" step="0.01" value="3">
         </div>
 
         <label for="phase2">
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
                 <msub><mtext>phase</mtext><mn>2</mn></msub>
             </math>:
+            <input type="number" id="phase2_input" min="0" max="359" step="1" value="180">
         </label>
         <div class="slider-container">
             <input type="range" id="phase2" min="0" max="359" step="1" value="180">
-            <input type="number" id="phase2_input" min="0" max="359" step="1" value="180">
         </div>
 
         <label for="winding_f">
@@ -204,10 +205,10 @@
                 <mo>&#x2009;</mo>
                 <mi>f</mi>
             </math>:
+            <input type="number" id="winding_f_input" min="0" max="10" step="0.01" value="3">
         </label>
         <div class="slider-container">
             <input type="range" id="winding_f" min="0" max="10" step="0.01" value="3">
-            <input type="number" id="winding_f_input" min="0" max="10" step="0.01" value="3">
         </div>
     </div>
 
