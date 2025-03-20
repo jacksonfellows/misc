@@ -40,7 +40,7 @@
             margin-bottom: 10px;
             width: 300px;
         }
-        
+
         .equation {
             position: absolute;
             top: 10px;
@@ -53,7 +53,7 @@
             padding: 10px;
             border-radius: 5px;
         }
-        
+
         .equation math {
             font-size: 20px;
             margin-top: 5px;
@@ -64,7 +64,6 @@
 <body>
     <canvas id="canvas"></canvas>
     <div class="equation">
-        f(t) = A₁ cos(2π·f₁·t + phase₁) + A₂ sin(2π·f₂·t + phase₂)
         <math xmlns="http://www.w3.org/1998/Math/MathML">
             <mrow>
                 <mi>f</mi>
@@ -72,30 +71,48 @@
                 <mi>t</mi>
                 <mo>)</mo>
                 <mo>=</mo>
-                <msub><mi>A</mi><mn>1</mn></msub>
+                <msub>
+                    <mi>A</mi>
+                    <mn>1</mn>
+                </msub>
                 <mo>cos</mo>
                 <mo>(</mo>
                 <mn>2</mn>
                 <mi>π</mi>
                 <mo>⋅</mo>
-                <msub><mi>f</mi><mn>1</mn></msub>
+                <msub>
+                    <mi>f</mi>
+                    <mn>1</mn>
+                </msub>
                 <mo>⋅</mo>
                 <mi>t</mi>
                 <mo>+</mo>
-                <msub><mtext>phase</mtext><mn>1</mn></msub>
+                <msub>
+                    <mtext>phase</mtext>
+                    <mn>1</mn>
+                </msub>
                 <mo>)</mo>
                 <mo>+</mo>
-                <msub><mi>A</mi><mn>2</mn></msub>
+                <msub>
+                    <mi>A</mi>
+                    <mn>2</mn>
+                </msub>
                 <mo>sin</mo>
                 <mo>(</mo>
                 <mn>2</mn>
                 <mi>π</mi>
                 <mo>⋅</mo>
-                <msub><mi>f</mi><mn>2</mn></msub>
+                <msub>
+                    <mi>f</mi>
+                    <mn>2</mn>
+                </msub>
                 <mo>⋅</mo>
                 <mi>t</mi>
                 <mo>+</mo>
-                <msub><mtext>phase</mtext><mn>2</mn></msub>
+                <msub>
+                    <mtext>phase</mtext>
+                    <mn>2</mn>
+                </msub>
                 <mo>)</mo>
             </mrow>
         </math>
