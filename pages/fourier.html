@@ -40,11 +40,66 @@
             margin-bottom: 10px;
             width: 300px;
         }
+        
+        .equation {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 18px;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .equation math {
+            font-size: 20px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 
 <body>
     <canvas id="canvas"></canvas>
+    <div class="equation">
+        f(t) = A₁ cos(2π·f₁·t + phase₁) + A₂ sin(2π·f₂·t + phase₂)
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <mrow>
+                <mi>f</mi>
+                <mo>(</mo>
+                <mi>t</mi>
+                <mo>)</mo>
+                <mo>=</mo>
+                <msub><mi>A</mi><mn>1</mn></msub>
+                <mo>cos</mo>
+                <mo>(</mo>
+                <mn>2</mn>
+                <mi>π</mi>
+                <mo>⋅</mo>
+                <msub><mi>f</mi><mn>1</mn></msub>
+                <mo>⋅</mo>
+                <mi>t</mi>
+                <mo>+</mo>
+                <msub><mtext>phase</mtext><mn>1</mn></msub>
+                <mo>)</mo>
+                <mo>+</mo>
+                <msub><mi>A</mi><mn>2</mn></msub>
+                <mo>sin</mo>
+                <mo>(</mo>
+                <mn>2</mn>
+                <mi>π</mi>
+                <mo>⋅</mo>
+                <msub><mi>f</mi><mn>2</mn></msub>
+                <mo>⋅</mo>
+                <mi>t</mi>
+                <mo>+</mo>
+                <msub><mtext>phase</mtext><mn>2</mn></msub>
+                <mo>)</mo>
+            </mrow>
+        </math>
+    </div>
     <div class="controls">
         <label for="A1">A1: <span id="A1_value">0.40</span></label>
         <input type="range" id="A1" min="0" max="0.5" step="0.01" value="0.4">
@@ -147,7 +202,7 @@
                 
                 void main() {
                     float x = aXPosition;
-                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.);
+                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*sin(x*2.*PI*u_f2 + u_phase2*PI/180.);
 
                     float screen_x = 2.*x - 1.; // [0,1] -> [-1,1]
                     float screen_y = 0.5*y + 0.5; // [-1,1] -> [0,1]
@@ -179,7 +234,7 @@
                 
                 void main() {
                     float x = aXPosition;
-                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.);
+                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*sin(x*2.*PI*u_f2 + u_phase2*PI/180.);
 
                     // wind (TODO fix N & k)
                     float N = 1000.;
