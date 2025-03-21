@@ -332,6 +332,8 @@
                 }
             `;
 
+            const calc_y = `u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.)`;
+
             // Draw the wave
             const vs_wave = `
                 #define PI 3.14159265
@@ -352,7 +354,7 @@
                 
                 void main() {
                     float x = aXPosition;
-                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.);
+                    float y = ${calc_y};
 
                     float screen_x = 2.*x - 1.; // [0,1] -> [-1,1]
                     float screen_y = 0.5*y + 0.5; // [-1,1] -> [0,1]
@@ -384,7 +386,7 @@
                 
                 void main() {
                     float x = aXPosition;
-                    float y = u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.);
+                    float y = ${calc_y};
 
                     // wind (TODO fix N & k)
                     float N = 1000.;
@@ -407,6 +409,66 @@
                     v_color = viridis(x);
                 }
             `;
+
+            const delta_def = `
+            float delta(float x) {
+                if (abs(x) < 0.02) {
+                    return 1.;
+                }
+                return 0.;
+            }
+            `
+
+            // Fourier transform
+            const vs_ft_real = `
+                #define PI 3.14159265
+
+                ${delta_def}
+
+                attribute float a_f;
+                varying vec4 v_color;
+
+                uniform float u_A1;
+                uniform float u_f1;
+                uniform float u_A2;
+                uniform float u_f2;
+                uniform float u_phase1;
+                uniform float u_phase2;
+                
+                void main () {
+                    // real is some constant factor off, doesn't matter for this
+                    float real = cos(u_phase1*PI/180.)*(delta(a_f - u_f1) + delta(a_f + u_f1)) + cos(u_phase2*PI/180.)*(delta(a_f - u_f2) + delta(a_f + u_f2));
+                    float screen_x = 0.7*a_f/10.;
+                    float screen_y = 0.3*real;
+                    gl_Position = vec4(screen_x, screen_y, 0., 1.);
+                    v_color = vec4(1., 1., 1., 1.);
+                }
+            `
+
+            const vs_ft_imag = `
+                #define PI 3.14159265
+
+                ${delta_def}
+
+                attribute float a_f;
+                varying vec4 v_color;
+
+                uniform float u_A1;
+                uniform float u_f1;
+                uniform float u_A2;
+                uniform float u_f2;
+                uniform float u_phase1;
+                uniform float u_phase2;
+                
+                void main () {
+                    // real is some constant factor off, doesn't matter for this
+                    float imag = sin(u_phase1*PI/180.)*(delta(a_f - u_f1) - delta(a_f + u_f1)) + sin(u_phase2*PI/180.)*(delta(a_f - u_f2) - delta(a_f + u_f2));
+                    float screen_x = 0.7*a_f/10.;
+                    float screen_y = 0.3*imag;
+                    gl_Position = vec4(screen_x, screen_y, 0., 1.);
+                    v_color = vec4(1., 0., 0., 1.);
+                }
+            `
 
             // Create shader program
             function createShaderProgram(vsSource) {
@@ -459,20 +521,26 @@
             // Create programs
             const waveProgram = createShaderProgram(vs_wave);
             const windingProgram = createShaderProgram(vs_winding);
+            const ftRealProgram = createShaderProgram(vs_ft_real);
+            const ftImagProgram = createShaderProgram(vs_ft_imag);
 
-            if (!waveProgram || !windingProgram) {
+            if (!waveProgram || !windingProgram || !ftRealProgram || !ftImagProgram) {
                 document.body.innerHTML = "<p style='color:white;padding:20px;'>Failed to create shader program</p>";
                 return;
             }
 
-            locations = { wave: {}, winding: {} };
+            locations = { wave: {}, winding: {}, ft_real: {}, ft_imag: {} };
 
             function init_program(shaderProgram, name) {
                 // Use shader program
                 gl.useProgram(shaderProgram);
 
                 // Get attribute and uniform locations
-                locations[name]["position"] = gl.getAttribLocation(shaderProgram, 'aXPosition');
+                if (name == "wave" || name == "winding") {
+                    locations[name]["position"] = gl.getAttribLocation(shaderProgram, 'aXPosition');
+                } else if (name == "ft_real" || name == "ft_imag") {
+                    locations[name]["f"] = gl.getAttribLocation(shaderProgram, "a_f");
+                }
                 locations[name]["A1"] = gl.getUniformLocation(shaderProgram, 'u_A1');
                 locations[name]["f1"] = gl.getUniformLocation(shaderProgram, 'u_f1');
                 locations[name]["A2"] = gl.getUniformLocation(shaderProgram, 'u_A2');
@@ -485,6 +553,8 @@
 
             init_program(waveProgram, "wave");
             init_program(windingProgram, "winding");
+            init_program(ftRealProgram, "ft_real")
+            init_program(ftImagProgram, "ft_imag")
 
             // Create position buffer
             const positionBuffer = gl.createBuffer();
@@ -500,6 +570,20 @@
 
             // Fill buffer with positions
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // Create freqs buffer
+            const freqsBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, freqsBuffer);
+
+            // Generate freqs from -10 to 10
+            const NUM_FREQS = 1000;
+            const freqs = [];
+            for (let i = 0; i < NUM_FREQS; i++) {
+                freqs.push(20.4 * (i / NUM_FREQS) - 10.2);
+            }
+
+            // Fill buffer with freqs
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(freqs), gl.STATIC_DRAW);
 
             // UI controls
             const A1_slider = document.getElementById('A1');
@@ -593,8 +677,8 @@
                 // Clear canvas
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
-                for (let programName of ["wave", "winding"]) {
-                    gl.useProgram({ wave: waveProgram, winding: windingProgram }[programName]);
+                for (let programName of ["wave", "winding", "ft_real", "ft_imag"]) {
+                    gl.useProgram({ wave: waveProgram, winding: windingProgram, ft_real: ftRealProgram, ft_imag: ftImagProgram }[programName]);
                     // Update uniforms
                     gl.uniform1f(locations[programName]["A1"], A1);
                     gl.uniform1f(locations[programName]["f1"], f1);
@@ -605,15 +689,24 @@
                     gl.uniform1f(locations[programName]["winding_f"], winding_f);
                     gl.uniform1f(locations[programName]["aspect"], canvas.width / canvas.height);  // <-- set aspect ratio
 
-                    // Set up position attribute
-                    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-                    gl.enableVertexAttribArray(locations[programName]["position"]);
-                    gl.vertexAttribPointer(locations[programName]["position"], 1, gl.FLOAT, false, 0, 0);
+                    if (programName == "wave" || programName == "winding") {
+                        // Set up position attribute
+                        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                        gl.enableVertexAttribArray(locations[programName]["position"]);
+                        gl.vertexAttribPointer(locations[programName]["position"], 1, gl.FLOAT, false, 0, 0);
 
-                    // Draw line strip (connected line segments for smooth curve)
-                    gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
+                        // Draw line strip (connected line segments for smooth curve)
+                        gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
+                    }
+                    if (programName == "ft_real" || programName == "ft_imag") {
+                        gl.bindBuffer(gl.ARRAY_BUFFER, freqsBuffer);
+                        gl.enableVertexAttribArray(locations[programName]["f"]);
+                        gl.vertexAttribPointer(locations[programName]["f"], 1, gl.FLOAT, false, 0, 0);
+
+                        // Draw line strip (connected line segments for smooth curve)
+                        gl.drawArrays(gl.LINE_STRIP, 0, NUM_FREQS);
+                    }
                 }
-
                 // Request next frame
                 requestAnimationFrame(draw);
             }
