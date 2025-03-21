@@ -482,65 +482,17 @@
                 }
             `;
 
-            const delta_def = `
-            float delta(float x) {
-                if (abs(x) < 0.02) {
-                    return 1.;
-                }
-                return 0.;
-            }
-            `
-
-            // Fourier transform
-            const vs_ft_real = `
-                #define PI 3.14159265
-
-                ${delta_def}
-
-                attribute float a_f;
+            // Simple line shader
+            const vs_line = `
+                attribute vec2 a_xy;
                 varying vec4 v_color;
-
-                uniform float u_A1;
-                uniform float u_f1;
-                uniform float u_A2;
-                uniform float u_f2;
-                uniform float u_phase1;
-                uniform float u_phase2;
+                uniform vec4 u_color;
                 
-                void main () {
-                    // real is some constant factor off, doesn't matter for this
-                    float real = cos(u_phase1*PI/180.)*(delta(a_f - u_f1) + delta(a_f + u_f1)) + cos(u_phase2*PI/180.)*(delta(a_f - u_f2) + delta(a_f + u_f2));
-                    float screen_x = 0.7*a_f/10.;
-                    float screen_y = 0.3*real;
-                    gl_Position = vec4(screen_x, screen_y, 0., 1.);
-                    v_color = vec4(1., 1., 1., 1.);
+                void main() {
+                    gl_Position = vec4(a_xy, 0.0, 1.0);
+                    v_color = u_color;
                 }
-            `
-
-            const vs_ft_imag = `
-                #define PI 3.14159265
-
-                ${delta_def}
-
-                attribute float a_f;
-                varying vec4 v_color;
-
-                uniform float u_A1;
-                uniform float u_f1;
-                uniform float u_A2;
-                uniform float u_f2;
-                uniform float u_phase1;
-                uniform float u_phase2;
-                
-                void main () {
-                    // real is some constant factor off, doesn't matter for this
-                    float imag = sin(u_phase1*PI/180.)*(delta(a_f - u_f1) - delta(a_f + u_f1)) + sin(u_phase2*PI/180.)*(delta(a_f - u_f2) - delta(a_f + u_f2));
-                    float screen_x = 0.7*a_f/10.;
-                    float screen_y = 0.3*imag;
-                    gl_Position = vec4(screen_x, screen_y, 0., 1.);
-                    v_color = vec4(1., 0., 0., 1.);
-                }
-            `
+            `;
 
             // Create shader program
             function createShaderProgram(vsSource) {
@@ -593,15 +545,14 @@
             // Create programs
             const waveProgram = createShaderProgram(vs_wave);
             const windingProgram = createShaderProgram(vs_winding);
-            const ftRealProgram = createShaderProgram(vs_ft_real);
-            const ftImagProgram = createShaderProgram(vs_ft_imag);
+            const lineProgram = createShaderProgram(vs_line);
 
-            if (!waveProgram || !windingProgram || !ftRealProgram || !ftImagProgram) {
+            if (!waveProgram || !windingProgram || !lineProgram) {
                 document.body.innerHTML = "<p style='color:white;padding:20px;'>Failed to create shader program</p>";
                 return;
             }
 
-            locations = { wave: {}, winding: {}, ft_real: {}, ft_imag: {} };
+            locations = { wave: {}, winding: {}, line: {} };
 
             function init_program(shaderProgram, name) {
                 // Use shader program
@@ -610,23 +561,23 @@
                 // Get attribute and uniform locations
                 if (name == "wave" || name == "winding") {
                     locations[name]["position"] = gl.getAttribLocation(shaderProgram, 'aXPosition');
-                } else if (name == "ft_real" || name == "ft_imag") {
-                    locations[name]["f"] = gl.getAttribLocation(shaderProgram, "a_f");
+                    locations[name]["A1"] = gl.getUniformLocation(shaderProgram, 'u_A1');
+                    locations[name]["f1"] = gl.getUniformLocation(shaderProgram, 'u_f1');
+                    locations[name]["A2"] = gl.getUniformLocation(shaderProgram, 'u_A2');
+                    locations[name]["f2"] = gl.getUniformLocation(shaderProgram, 'u_f2');
+                    locations[name]["phase1"] = gl.getUniformLocation(shaderProgram, 'u_phase1');
+                    locations[name]["phase2"] = gl.getUniformLocation(shaderProgram, 'u_phase2');
+                    locations[name]["winding_f"] = gl.getUniformLocation(shaderProgram, 'u_winding_f');
+                    locations[name]["aspect"] = gl.getUniformLocation(shaderProgram, 'u_aspect');
+                } else if (name == "line") {
+                    locations[name]["xy"] = gl.getAttribLocation(shaderProgram, 'a_xy');
+                    locations[name]["color"] = gl.getUniformLocation(shaderProgram, 'u_color');
                 }
-                locations[name]["A1"] = gl.getUniformLocation(shaderProgram, 'u_A1');
-                locations[name]["f1"] = gl.getUniformLocation(shaderProgram, 'u_f1');
-                locations[name]["A2"] = gl.getUniformLocation(shaderProgram, 'u_A2');
-                locations[name]["f2"] = gl.getUniformLocation(shaderProgram, 'u_f2');
-                locations[name]["phase1"] = gl.getUniformLocation(shaderProgram, 'u_phase1');
-                locations[name]["phase2"] = gl.getUniformLocation(shaderProgram, 'u_phase2');
-                locations[name]["winding_f"] = gl.getUniformLocation(shaderProgram, 'u_winding_f');
-                locations[name]["aspect"] = gl.getUniformLocation(shaderProgram, 'u_aspect');
             }
 
             init_program(waveProgram, "wave");
             init_program(windingProgram, "winding");
-            init_program(ftRealProgram, "ft_real")
-            init_program(ftImagProgram, "ft_imag")
+            init_program(lineProgram, "line");
 
             // Create position buffer
             const positionBuffer = gl.createBuffer();
@@ -643,19 +594,8 @@
             // Fill buffer with positions
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-            // Create freqs buffer
-            const freqsBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, freqsBuffer);
-
-            // Generate freqs from -10 to 10
-            const NUM_FREQS = 1024;
-            const freqs = [];
-            for (let i = 0; i < NUM_FREQS; i++) {
-                freqs.push(20.4 * (i / NUM_FREQS) - 10.2);
-            }
-
-            // Fill buffer with freqs
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(freqs), gl.STATIC_DRAW);
+            // Create a buffer for line vertices
+            const lineBuffer = gl.createBuffer();
 
             // UI controls
             const A1_slider = document.getElementById('A1');
@@ -749,36 +689,60 @@
                 // Clear canvas
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
-                for (let programName of ["wave", "winding", "ft_real", "ft_imag"]) {
-                    gl.useProgram({ wave: waveProgram, winding: windingProgram, ft_real: ftRealProgram, ft_imag: ftImagProgram }[programName]);
-                    // Update uniforms
-                    gl.uniform1f(locations[programName]["A1"], A1);
-                    gl.uniform1f(locations[programName]["f1"], f1);
-                    gl.uniform1f(locations[programName]["A2"], A2);
-                    gl.uniform1f(locations[programName]["f2"], f2);
-                    gl.uniform1f(locations[programName]["phase1"], phase1);
-                    gl.uniform1f(locations[programName]["phase2"], phase2);
-                    gl.uniform1f(locations[programName]["winding_f"], winding_f);
-                    gl.uniform1f(locations[programName]["aspect"], canvas.width / canvas.height);  // <-- set aspect ratio
-
-                    if (programName == "wave" || programName == "winding") {
-                        // Set up position attribute
-                        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-                        gl.enableVertexAttribArray(locations[programName]["position"]);
-                        gl.vertexAttribPointer(locations[programName]["position"], 1, gl.FLOAT, false, 0, 0);
-
-                        // Draw line strip (connected line segments for smooth curve)
-                        gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
-                    }
-                    if (programName == "ft_real" || programName == "ft_imag") {
-                        gl.bindBuffer(gl.ARRAY_BUFFER, freqsBuffer);
-                        gl.enableVertexAttribArray(locations[programName]["f"]);
-                        gl.vertexAttribPointer(locations[programName]["f"], 1, gl.FLOAT, false, 0, 0);
-
-                        // Draw line strip (connected line segments for smooth curve)
-                        gl.drawArrays(gl.LINE_STRIP, 0, NUM_FREQS);
-                    }
-                }
+                
+                // Draw wave
+                gl.useProgram(waveProgram);
+                // Update uniforms
+                gl.uniform1f(locations["wave"]["A1"], A1);
+                gl.uniform1f(locations["wave"]["f1"], f1);
+                gl.uniform1f(locations["wave"]["A2"], A2);
+                gl.uniform1f(locations["wave"]["f2"], f2);
+                gl.uniform1f(locations["wave"]["phase1"], phase1);
+                gl.uniform1f(locations["wave"]["phase2"], phase2);
+                gl.uniform1f(locations["wave"]["winding_f"], winding_f);
+                gl.uniform1f(locations["wave"]["aspect"], canvas.width / canvas.height);
+                
+                // Set up position attribute
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.enableVertexAttribArray(locations["wave"]["position"]);
+                gl.vertexAttribPointer(locations["wave"]["position"], 1, gl.FLOAT, false, 0, 0);
+                
+                // Draw line strip (connected line segments for smooth curve)
+                gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
+                
+                // Draw winding
+                gl.useProgram(windingProgram);
+                // Update uniforms
+                gl.uniform1f(locations["winding"]["A1"], A1);
+                gl.uniform1f(locations["winding"]["f1"], f1);
+                gl.uniform1f(locations["winding"]["A2"], A2);
+                gl.uniform1f(locations["winding"]["f2"], f2);
+                gl.uniform1f(locations["winding"]["phase1"], phase1);
+                gl.uniform1f(locations["winding"]["phase2"], phase2);
+                gl.uniform1f(locations["winding"]["winding_f"], winding_f);
+                gl.uniform1f(locations["winding"]["aspect"], canvas.width / canvas.height);
+                
+                // Set up position attribute
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.enableVertexAttribArray(locations["winding"]["position"]);
+                gl.vertexAttribPointer(locations["winding"]["position"], 1, gl.FLOAT, false, 0, 0);
+                
+                // Draw line strip (connected line segments for smooth curve)
+                gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
+                
+                // Example of using the line program (you can use this for drawing axes, etc.)
+                // gl.useProgram(lineProgram);
+                // gl.uniform4f(locations["line"]["color"], 1.0, 1.0, 1.0, 1.0); // White color
+                // gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+                // const lineVertices = new Float32Array([
+                //     -0.8, -0.8,
+                //     0.8, 0.8
+                // ]);
+                // gl.bufferData(gl.ARRAY_BUFFER, lineVertices, gl.STATIC_DRAW);
+                // gl.enableVertexAttribArray(locations["line"]["xy"]);
+                // gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
+                // gl.drawArrays(gl.LINES, 0, 2);
+                
                 // Request next frame
                 requestAnimationFrame(draw);
             }
