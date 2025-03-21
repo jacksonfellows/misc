@@ -274,6 +274,78 @@
     </div>
 
     <script>
+        var Module = {
+            // Configuration options
+            onRuntimeInitialized: function () {
+                console.log("WebAssembly module is ready!");
+                // Call your functions that use the module here
+            }
+        }
+
+        function performFFT(inputData) {
+            try {
+                // Size of the data (must be a power of 2)
+                const size = inputData.length;
+
+                console.log("Input data received:", inputData.length);
+
+                // Allocate memory in the WASM module
+                if (typeof Module._malloc !== 'function') {
+                    console.error("Module._malloc is not available. Available exports:", Object.keys(Module));
+                    throw new Error("malloc function not available");
+                }
+
+                const inputPtr = Module._malloc(size * 4); // 4 bytes per float
+                const outputPtr = Module._malloc(size * 8); // 8 bytes per complex (real+imaginary)
+
+                console.log("Memory allocated, input:", inputPtr, "output:", outputPtr);
+
+                // Copy input data to WASM memory
+                const inputHeap = new Float32Array(Module.HEAPF32.buffer, inputPtr, size);
+                inputHeap.set(inputData);
+
+                console.log("Input data copied to WASM memory");
+
+                // Create FFT config for real-to-complex transform
+                if (typeof Module._kiss_fftr_alloc !== 'function') {
+                    console.error("Module._kiss_fftr_alloc is not available");
+                    throw new Error("kiss_fftr_alloc function not available");
+                }
+
+                const fftConfig = Module._kiss_fftr_alloc(size, 0, 0, 0);
+
+                console.log("FFT config created:", fftConfig);
+
+                // Run the FFT
+                Module._kiss_fftr(fftConfig, inputPtr, outputPtr);
+
+                console.log("FFT executed");
+
+                // Get the result
+                const outputHeap = new Float32Array(Module.HEAPF32.buffer, outputPtr, size * 2);
+
+                // Create a copy of the data
+                const result = new Float32Array(size * 2);
+                for (let i = 0; i < size * 2; i++) {
+                    result[i] = outputHeap[i];
+                }
+
+                console.log("Result copied, length:", result.length);
+
+                // Clean up
+                Module._free(inputPtr);
+                Module._free(outputPtr);
+                Module._free(fftConfig);
+
+                console.log("Memory freed");
+
+                return result;
+            } catch (error) {
+                console.error("Error in performFFT:", error);
+                throw error;
+            }
+        }
+
         function main() {
             // Get canvas element
             const canvas = document.getElementById('canvas');
@@ -389,7 +461,7 @@
                     float y = ${calc_y};
 
                     // wind (TODO fix N & k)
-                    float N = 1000.;
+                    float N = 1024.;
                     float k = x*N;
                     float j = u_winding_f;
                     float a = (k*j)*atan(-sin(2.*PI/N), cos(2.*PI/N));
@@ -561,7 +633,7 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
             // Generate x positions in [0,1]
-            const NUM_POINTS = 1000;
+            const NUM_POINTS = 1024;
             const positions = [];
             for (let i = 0; i < NUM_POINTS; i++) {
                 const x = i / NUM_POINTS;
@@ -576,7 +648,7 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, freqsBuffer);
 
             // Generate freqs from -10 to 10
-            const NUM_FREQS = 1000;
+            const NUM_FREQS = 1024;
             const freqs = [];
             for (let i = 0; i < NUM_FREQS; i++) {
                 freqs.push(20.4 * (i / NUM_FREQS) - 10.2);
@@ -716,6 +788,8 @@
         }
         main();
     </script>
+
+    <script src="kissfft.js"></script>
 </body>
 
 </html>
