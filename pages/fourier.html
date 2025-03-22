@@ -287,8 +287,6 @@
                 // Size of the data (must be a power of 2)
                 const size = inputData.length;
 
-                console.log("Input data received:", inputData.length);
-
                 // Allocate memory in the WASM module
                 if (typeof Module._malloc !== 'function') {
                     console.error("Module._malloc is not available. Available exports:", Object.keys(Module));
@@ -298,13 +296,9 @@
                 const inputPtr = Module._malloc(size * 4); // 4 bytes per float
                 const outputPtr = Module._malloc(size * 8); // 8 bytes per complex (real+imaginary)
 
-                console.log("Memory allocated, input:", inputPtr, "output:", outputPtr);
-
                 // Copy input data to WASM memory
                 const inputHeap = new Float32Array(Module.HEAPF32.buffer, inputPtr, size);
                 inputHeap.set(inputData);
-
-                console.log("Input data copied to WASM memory");
 
                 // Create FFT config for real-to-complex transform
                 if (typeof Module._kiss_fftr_alloc !== 'function') {
@@ -314,12 +308,8 @@
 
                 const fftConfig = Module._kiss_fftr_alloc(size, 0, 0, 0);
 
-                console.log("FFT config created:", fftConfig);
-
                 // Run the FFT
                 Module._kiss_fftr(fftConfig, inputPtr, outputPtr);
-
-                console.log("FFT executed");
 
                 // Get the result
                 const outputHeap = new Float32Array(Module.HEAPF32.buffer, outputPtr, size * 2);
@@ -330,14 +320,10 @@
                     result[i] = outputHeap[i];
                 }
 
-                console.log("Result copied, length:", result.length);
-
                 // Clean up
                 Module._free(inputPtr);
                 Module._free(outputPtr);
                 Module._free(fftConfig);
-
-                console.log("Memory freed");
 
                 return result;
             } catch (error) {
@@ -407,10 +393,10 @@
             // JavaScript function to calculate wave y values
             function calculateWave(x, A1, f1, phase1, A2, f2, phase2) {
                 const PI = Math.PI;
-                return A1 * Math.cos(x * 2 * PI * f1 + phase1 * PI / 180) + 
-                       A2 * Math.cos(x * 2 * PI * f2 + phase2 * PI / 180);
+                return A1 * Math.cos(x * 2 * PI * f1 + phase1 * PI / 180) +
+                    A2 * Math.cos(x * 2 * PI * f2 + phase2 * PI / 180);
             }
-            
+
             // Define calc_y for the winding shader
             const calc_y = `u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.)`;
 
@@ -581,76 +567,76 @@
 
             // Create a buffer for line vertices
             const lineBuffer = gl.createBuffer();
-            
+
             // Create buffers
             const waveBuffer = gl.createBuffer();
             const fftRealBuffer = gl.createBuffer();
             const fftImagBuffer = gl.createBuffer();
-            
+
             // Function to generate wave vertices
             function generateWaveVertices() {
                 const vertices = [];
                 const yValues = []; // Store y values for FFT
-                
+
                 for (let i = 0; i < NUM_POINTS; i++) {
                     const x = i / NUM_POINTS;
                     // Calculate y value using our JavaScript function
                     const y = calculateWave(x, A1, f1, phase1, A2, f2, phase2);
                     yValues.push(y); // Store for FFT
-                    
+
                     // Transform to screen coordinates
                     const screen_x = 2 * x - 1; // [0,1] -> [-1,1]
                     let screen_y = 0.5 * y + 0.5; // [-1,1] -> [0,1]
                     screen_y = 0.7 * screen_y + 0.3;
                     screen_y = screen_y * 0.95 - 0.025; // pad
-                    
+
                     vertices.push(screen_x, screen_y);
                 }
-                
+
                 return {
                     vertices: new Float32Array(vertices),
                     yValues: new Float32Array(yValues)
                 };
             }
-            
+
             // Function to generate FFT vertices
             function generateFFTVertices(yValues) {
                 try {
                     // Perform FFT on the y values
                     const fftResult = performFFT(yValues);
-                    
+
                     // Create vertices for real part
                     const realVertices = [];
                     // Create vertices for imaginary part
                     const imagVertices = [];
-                    
+
                     // We only need the first half of the FFT result (up to Nyquist frequency)
                     const halfLength = Math.floor(NUM_POINTS / 2);
-                    
+
                     for (let i = 0; i < halfLength; i++) {
                         const x = i / halfLength; // Normalize x to [0,1]
-                        
+
                         // Get real and imaginary parts
                         const real = fftResult[i * 2];
                         const imag = fftResult[i * 2 + 1];
-                        
+
                         // Normalize magnitude for display
                         const normalizedReal = real / (NUM_POINTS / 2);
                         const normalizedImag = imag / (NUM_POINTS / 2);
-                        
+
                         // Transform to screen coordinates
                         const screen_x = 2 * x - 1; // [0,1] -> [-1,1]
-                        
+
                         // Position real part in top half
                         const screen_y_real = 0.3 * normalizedReal + 0.4;
-                        
+
                         // Position imaginary part in bottom half
                         const screen_y_imag = 0.3 * normalizedImag - 0.4;
-                        
+
                         realVertices.push(screen_x, screen_y_real);
                         imagVertices.push(screen_x, screen_y_imag);
                     }
-                    
+
                     return {
                         real: new Float32Array(realVertices),
                         imag: new Float32Array(imagVertices)
@@ -757,10 +743,10 @@
                 // Clear canvas
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
-                
+
                 // Generate wave vertices based on current parameters
                 const waveData = generateWaveVertices();
-                
+
                 // Draw wave using line shader with viridis coloring
                 gl.useProgram(lineProgram);
                 gl.uniform4f(locations["line"]["color"], 0.0, 0.8, 1.0, 1.0); // Fallback color
@@ -770,10 +756,10 @@
                 gl.enableVertexAttribArray(locations["line"]["xy"]);
                 gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
                 gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
-                
+
                 // Generate FFT vertices
                 const fftVertices = generateFFTVertices(waveData.yValues);
-                
+
                 // Draw FFT real part
                 gl.useProgram(lineProgram);
                 gl.uniform4f(locations["line"]["color"], 1.0, 1.0, 1.0, 1.0); // White color
@@ -783,7 +769,7 @@
                 gl.enableVertexAttribArray(locations["line"]["xy"]);
                 gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
                 gl.drawArrays(gl.LINE_STRIP, 0, fftVertices.real.length / 2);
-                
+
                 // Draw FFT imaginary part
                 gl.useProgram(lineProgram);
                 gl.uniform4f(locations["line"]["color"], 1.0, 0.5, 0.5, 1.0); // Light red color
@@ -793,7 +779,7 @@
                 gl.enableVertexAttribArray(locations["line"]["xy"]);
                 gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
                 gl.drawArrays(gl.LINE_STRIP, 0, fftVertices.imag.length / 2);
-                
+
                 // Draw winding
                 gl.useProgram(windingProgram);
                 // Update uniforms
@@ -805,15 +791,15 @@
                 gl.uniform1f(locations["winding"]["phase2"], phase2);
                 gl.uniform1f(locations["winding"]["winding_f"], winding_f);
                 gl.uniform1f(locations["winding"]["aspect"], canvas.width / canvas.height);
-                
+
                 // Set up position attribute
                 gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
                 gl.enableVertexAttribArray(locations["winding"]["position"]);
                 gl.vertexAttribPointer(locations["winding"]["position"], 1, gl.FLOAT, false, 0, 0);
-                
+
                 // Draw line strip (connected line segments for smooth curve)
                 gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
-                
+
                 // Request next frame
                 requestAnimationFrame(draw);
             }
