@@ -458,15 +458,25 @@
                 }
             `;
 
-            // Simple line shader
+            // Line shader with optional viridis coloring
             const vs_line = `
                 attribute vec2 a_xy;
                 varying vec4 v_color;
                 uniform vec4 u_color;
+                uniform int u_use_viridis;
+                
+                ${viridis_def}
                 
                 void main() {
                     gl_Position = vec4(a_xy, 0.0, 1.0);
-                    v_color = u_color;
+                    
+                    if (u_use_viridis == 1) {
+                        // Use x coordinate for viridis coloring (normalized to 0-1)
+                        float x = (a_xy.x + 1.0) * 0.5; // Convert from [-1,1] to [0,1]
+                        v_color = viridis(x);
+                    } else {
+                        v_color = u_color;
+                    }
                 }
             `;
 
@@ -547,6 +557,7 @@
                 } else if (name == "line") {
                     locations[name]["xy"] = gl.getAttribLocation(shaderProgram, 'a_xy');
                     locations[name]["color"] = gl.getUniformLocation(shaderProgram, 'u_color');
+                    locations[name]["use_viridis"] = gl.getUniformLocation(shaderProgram, 'u_use_viridis');
                 }
             }
 
@@ -689,9 +700,10 @@
                 // Generate wave vertices based on current parameters
                 const waveVertices = generateWaveVertices();
                 
-                // Draw wave using line shader
+                // Draw wave using line shader with viridis coloring
                 gl.useProgram(lineProgram);
-                gl.uniform4f(locations["line"]["color"], 0.0, 0.8, 1.0, 1.0); // Cyan color
+                gl.uniform4f(locations["line"]["color"], 0.0, 0.8, 1.0, 1.0); // Fallback color
+                gl.uniform1i(locations["line"]["use_viridis"], 1); // Enable viridis coloring
                 gl.bindBuffer(gl.ARRAY_BUFFER, waveBuffer);
                 gl.bufferData(gl.ARRAY_BUFFER, waveVertices, gl.STATIC_DRAW);
                 gl.enableVertexAttribArray(locations["line"]["xy"]);
