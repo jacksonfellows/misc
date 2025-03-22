@@ -410,6 +410,9 @@
                 return A1 * Math.cos(x * 2 * PI * f1 + phase1 * PI / 180) + 
                        A2 * Math.cos(x * 2 * PI * f2 + phase2 * PI / 180);
             }
+            
+            // Define calc_y for the winding shader
+            const calc_y = `u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.)`;
 
             // Draw winding diagram
             const vs_winding = `
