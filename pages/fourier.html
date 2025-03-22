@@ -404,39 +404,12 @@
                 }
             `;
 
-            const calc_y = `u_A1*cos(x*2.*PI*u_f1 + u_phase1*PI/180.) + u_A2*cos(x*2.*PI*u_f2 + u_phase2*PI/180.)`;
-
-            // Draw the wave
-            const vs_wave = `
-                #define PI 3.14159265
-
-                attribute float aXPosition;
-                uniform float u_aspect;
-                varying vec4 v_color;
-                        
-                uniform float u_A1;
-                uniform float u_f1;
-                uniform float u_A2;
-                uniform float u_f2;
-                uniform float u_phase1;
-                uniform float u_phase2;
-                uniform float u_winding_f; // unused
-
-                ${viridis_def}
-                
-                void main() {
-                    float x = aXPosition;
-                    float y = ${calc_y};
-
-                    float screen_x = 2.*x - 1.; // [0,1] -> [-1,1]
-                    float screen_y = 0.5*y + 0.5; // [-1,1] -> [0,1]
-                    screen_y = 0.7*screen_y + 0.3;
-                    screen_y = screen_y*0.95 - 0.025; // pad
-                    gl_Position = vec4(screen_x, screen_y, 0.0, 1.0);
-
-                    v_color = viridis(x);
-                }
-            `;
+            // JavaScript function to calculate wave y values
+            function calculateWave(x, A1, f1, phase1, A2, f2, phase2) {
+                const PI = Math.PI;
+                return A1 * Math.cos(x * 2 * PI * f1 + phase1 * PI / 180) + 
+                       A2 * Math.cos(x * 2 * PI * f2 + phase2 * PI / 180);
+            }
 
             // Draw winding diagram
             const vs_winding = `
@@ -543,23 +516,22 @@
             }
 
             // Create programs
-            const waveProgram = createShaderProgram(vs_wave);
             const windingProgram = createShaderProgram(vs_winding);
             const lineProgram = createShaderProgram(vs_line);
 
-            if (!waveProgram || !windingProgram || !lineProgram) {
+            if (!windingProgram || !lineProgram) {
                 document.body.innerHTML = "<p style='color:white;padding:20px;'>Failed to create shader program</p>";
                 return;
             }
 
-            locations = { wave: {}, winding: {}, line: {} };
+            locations = { winding: {}, line: {} };
 
             function init_program(shaderProgram, name) {
                 // Use shader program
                 gl.useProgram(shaderProgram);
 
                 // Get attribute and uniform locations
-                if (name == "wave" || name == "winding") {
+                if (name == "winding") {
                     locations[name]["position"] = gl.getAttribLocation(shaderProgram, 'aXPosition');
                     locations[name]["A1"] = gl.getUniformLocation(shaderProgram, 'u_A1');
                     locations[name]["f1"] = gl.getUniformLocation(shaderProgram, 'u_f1');
@@ -575,11 +547,10 @@
                 }
             }
 
-            init_program(waveProgram, "wave");
             init_program(windingProgram, "winding");
             init_program(lineProgram, "line");
 
-            // Create position buffer
+            // Create position buffer for winding
             const positionBuffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
@@ -596,6 +567,28 @@
 
             // Create a buffer for line vertices
             const lineBuffer = gl.createBuffer();
+            
+            // Create wave vertices buffer
+            const waveBuffer = gl.createBuffer();
+            
+            // Function to generate wave vertices
+            function generateWaveVertices() {
+                const vertices = [];
+                for (let i = 0; i < NUM_POINTS; i++) {
+                    const x = i / NUM_POINTS;
+                    // Calculate y value using our JavaScript function
+                    const y = calculateWave(x, A1, f1, phase1, A2, f2, phase2);
+                    
+                    // Transform to screen coordinates
+                    const screen_x = 2 * x - 1; // [0,1] -> [-1,1]
+                    let screen_y = 0.5 * y + 0.5; // [-1,1] -> [0,1]
+                    screen_y = 0.7 * screen_y + 0.3;
+                    screen_y = screen_y * 0.95 - 0.025; // pad
+                    
+                    vertices.push(screen_x, screen_y);
+                }
+                return new Float32Array(vertices);
+            }
 
             // UI controls
             const A1_slider = document.getElementById('A1');
@@ -690,24 +683,16 @@
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
                 
-                // Draw wave
-                gl.useProgram(waveProgram);
-                // Update uniforms
-                gl.uniform1f(locations["wave"]["A1"], A1);
-                gl.uniform1f(locations["wave"]["f1"], f1);
-                gl.uniform1f(locations["wave"]["A2"], A2);
-                gl.uniform1f(locations["wave"]["f2"], f2);
-                gl.uniform1f(locations["wave"]["phase1"], phase1);
-                gl.uniform1f(locations["wave"]["phase2"], phase2);
-                gl.uniform1f(locations["wave"]["winding_f"], winding_f);
-                gl.uniform1f(locations["wave"]["aspect"], canvas.width / canvas.height);
+                // Generate wave vertices based on current parameters
+                const waveVertices = generateWaveVertices();
                 
-                // Set up position attribute
-                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-                gl.enableVertexAttribArray(locations["wave"]["position"]);
-                gl.vertexAttribPointer(locations["wave"]["position"], 1, gl.FLOAT, false, 0, 0);
-                
-                // Draw line strip (connected line segments for smooth curve)
+                // Draw wave using line shader
+                gl.useProgram(lineProgram);
+                gl.uniform4f(locations["line"]["color"], 0.0, 0.8, 1.0, 1.0); // Cyan color
+                gl.bindBuffer(gl.ARRAY_BUFFER, waveBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, waveVertices, gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(locations["line"]["xy"]);
+                gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
                 gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
                 
                 // Draw winding
@@ -729,19 +714,6 @@
                 
                 // Draw line strip (connected line segments for smooth curve)
                 gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
-                
-                // Example of using the line program (you can use this for drawing axes, etc.)
-                // gl.useProgram(lineProgram);
-                // gl.uniform4f(locations["line"]["color"], 1.0, 1.0, 1.0, 1.0); // White color
-                // gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
-                // const lineVertices = new Float32Array([
-                //     -0.8, -0.8,
-                //     0.8, 0.8
-                // ]);
-                // gl.bufferData(gl.ARRAY_BUFFER, lineVertices, gl.STATIC_DRAW);
-                // gl.enableVertexAttribArray(locations["line"]["xy"]);
-                // gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
-                // gl.drawArrays(gl.LINES, 0, 2);
                 
                 // Request next frame
                 requestAnimationFrame(draw);
