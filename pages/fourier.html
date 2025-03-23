@@ -393,8 +393,9 @@
             // JavaScript function to calculate wave y values
             function calculateWave(x, A1, f1, phase1, A2, f2, phase2) {
                 const PI = Math.PI;
-                return A1 * Math.cos(x * 2 * PI * f1 + phase1 * PI / 180) +
-                    A2 * Math.cos(x * 2 * PI * f2 + phase2 * PI / 180);
+                // Since x is now in [0,10], we need to adjust the frequencies
+                return A1 * Math.cos(x * 2 * PI * (f1/10) + phase1 * PI / 180) +
+                    A2 * Math.cos(x * 2 * PI * (f2/10) + phase2 * PI / 180);
             }
 
             // Define calc_y for the winding shader
@@ -459,6 +460,7 @@
                     if (u_use_viridis == 1) {
                         // Use x coordinate for viridis coloring (normalized to 0-1)
                         float x = (a_xy.x + 1.0) * 0.5; // Convert from [-1,1] to [0,1]
+                        // x is now in [0,1] for coloring purposes
                         v_color = viridis(x);
                     } else {
                         v_color = u_color;
@@ -554,11 +556,11 @@
             const positionBuffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-            // Generate x positions in [0,1]
+            // Generate x positions in [0,10]
             const NUM_POINTS = 1024;
             const positions = [];
             for (let i = 0; i < NUM_POINTS; i++) {
-                const x = i / NUM_POINTS;
+                const x = 10 * i / NUM_POINTS;
                 positions.push(x);
             }
 
@@ -577,19 +579,19 @@
             function generateWaveVertices() {
                 const vertices = [];
                 const yValues = []; // Store y values for FFT
-
+                
                 for (let i = 0; i < NUM_POINTS; i++) {
-                    const x = i / NUM_POINTS;
+                    const x = 10 * i / NUM_POINTS; // x in [0,10]
                     // Calculate y value using our JavaScript function
                     const y = calculateWave(x, A1, f1, phase1, A2, f2, phase2);
                     yValues.push(y); // Store for FFT
-
+                    
                     // Transform to screen coordinates
-                    const screen_x = 2 * x - 1; // [0,1] -> [-1,1]
+                    const screen_x = 2 * (i / NUM_POINTS) - 1; // Normalize to [-1,1] for display
                     let screen_y = 0.5 * y + 0.5; // [-1,1] -> [0,1]
                     screen_y = 0.7 * screen_y + 0.3;
                     screen_y = screen_y * 0.95 - 0.025; // pad
-
+                    
                     vertices.push(screen_x, screen_y);
                 }
 
@@ -781,12 +783,12 @@
                 gl.useProgram(windingProgram);
                 // Update uniforms
                 gl.uniform1f(locations["winding"]["A1"], A1);
-                gl.uniform1f(locations["winding"]["f1"], f1);
+                gl.uniform1f(locations["winding"]["f1"], f1 / 10); // Adjust for 0-10 range
                 gl.uniform1f(locations["winding"]["A2"], A2);
-                gl.uniform1f(locations["winding"]["f2"], f2);
+                gl.uniform1f(locations["winding"]["f2"], f2 / 10); // Adjust for 0-10 range
                 gl.uniform1f(locations["winding"]["phase1"], phase1);
                 gl.uniform1f(locations["winding"]["phase2"], phase2);
-                gl.uniform1f(locations["winding"]["winding_f"], winding_f);
+                gl.uniform1f(locations["winding"]["winding_f"], winding_f / 10); // Adjust for 0-10 range
                 gl.uniform1f(locations["winding"]["aspect"], canvas.width / canvas.height);
 
                 // Set up position attribute
