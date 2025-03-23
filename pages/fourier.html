@@ -610,11 +610,8 @@
                     // Create vertices for imaginary part
                     const imagVertices = [];
 
-                    // We only need the first half of the FFT result (up to Nyquist frequency)
-                    const halfLength = Math.floor(NUM_POINTS / 2);
-
-                    for (let i = 0; i < halfLength; i++) {
-                        const x = i / halfLength; // Normalize x to [0,1]
+                    for (let i = 0; i < NUM_POINTS; i++) {
+                        const x = i / NUM_POINTS; // Normalize x to [0,1]
 
                         // Get real and imaginary parts
                         const real = fftResult[i * 2];
