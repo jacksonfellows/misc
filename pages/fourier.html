@@ -202,10 +202,10 @@
                     <mn>1</mn>
                 </msub>
             </math>:
-            <input type="number" id="f1_input" min="1" max="5" step="0.05" value="3">
+            <input type="number" id="f1_input" min="0" max="10" step="0.05" value="3">
         </label>
         <div class="slider-container">
-            <input type="range" id="f1" min="1" max="5" step="0.05" value="3">
+            <input type="range" id="f1" min="0" max="10" step="0.05" value="3">
         </div>
 
         <label for="phase1">
@@ -241,10 +241,10 @@
                     <mn>2</mn>
                 </msub>
             </math>:
-            <input type="number" id="f2_input" min="1" max="5" step="0.05" value="2">
+            <input type="number" id="f2_input" min="0" max="10" step="0.05" value="2">
         </label>
         <div class="slider-container">
-            <input type="range" id="f2" min="1" max="5" step="0.05" value="2">
+            <input type="range" id="f2" min="0" max="10" step="0.05" value="2">
         </div>
 
         <label for="phase2">
@@ -266,10 +266,10 @@
                 <mo>&#x2009;</mo>
                 <mi>f</mi>
             </math>:
-            <input type="number" id="winding_f_input" min="1" max="5" step="0.01" value="2">
+            <input type="number" id="winding_f_input" min="0" max="10" step="0.01" value="2">
         </label>
         <div class="slider-container">
-            <input type="range" id="winding_f" min="1" max="5" step="0.01" value="2">
+            <input type="range" id="winding_f" min="0" max="10" step="0.01" value="2">
         </div>
     </div>
 
@@ -729,13 +729,13 @@
                 A1 = updateFromInput(this, A1_slider, 0, 0.5, A1);
             });
             f1_input.addEventListener('input', function () {
-                f1 = updateFromInput(this, f1_slider, 1, 5, f1);
+                f1 = updateFromInput(this, f1_slider, 0, 10, f1);
             });
             A2_input.addEventListener('input', function () {
                 A2 = updateFromInput(this, A2_slider, 0, 0.5, A2);
             });
             f2_input.addEventListener('input', function () {
-                f2 = updateFromInput(this, f2_slider, 1, 5, f2);
+                f2 = updateFromInput(this, f2_slider, 0, 10, f2);
             });
             phase1_input.addEventListener('input', function () {
                 phase1 = updateFromInput(this, phase1_slider, 0, 359, phase1);
@@ -744,7 +744,7 @@
                 phase2 = updateFromInput(this, phase2_slider, 0, 359, phase2);
             });
             winding_f_input.addEventListener('input', function () {
-                winding_f = updateFromInput(this, winding_f_slider, 1, 5, winding_f);
+                winding_f = updateFromInput(this, winding_f_slider, 0, 10, winding_f);
             });
 
             // Draw function
