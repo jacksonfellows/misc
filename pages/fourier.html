@@ -266,10 +266,10 @@
                 <mo>&#x2009;</mo>
                 <mi>f</mi>
             </math>:
-            <input type="number" id="winding_f_input" min="0" max="10" step="0.01" value="2">
+            <input type="number" id="winding_f_input" min="0" max="10" step="0.05" value="2">
         </label>
         <div class="slider-container">
-            <input type="range" id="winding_f" min="0" max="10" step="0.01" value="2">
+            <input type="range" id="winding_f" min="0" max="10" step="0.05" value="2">
         </div>
     </div>
 
@@ -612,7 +612,7 @@
                     // Create vertices for imaginary part
                     const imagVertices = [];
 
-                    NUM_FREQS = 10 * f_max;
+                    NUM_FREQS = 10 * f_max + 3;
 
                     for (let i = 0; i < NUM_FREQS; i++) {
                         const x = i / NUM_FREQS; // Normalize x to [0,1]
