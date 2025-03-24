@@ -215,10 +215,10 @@
                     <mn>1</mn>
                 </msub>
             </math>&nbsp;[°]:
-            <input type="number" id="phase1_input" min="0" max="359" step="1" value="180">
+            <input type="number" id="phase1_input" min="0" max="359" step="1" value="90">
         </label>
         <div class="slider-container">
-            <input type="range" id="phase1" min="0" max="359" step="1" value="180">
+            <input type="range" id="phase1" min="0" max="359" step="1" value="90">
         </div>
 
         <label for="A2">
@@ -423,7 +423,7 @@
                     float y = ${calc_y};
 
                     // wind (TODO fix N & k)
-                    float N = 4096.;
+                    float N = 8192.;
                     float k = x*N;
                     float j = u_winding_f;
                     float a = (k*j)*atan(-sin(2.*PI/N), cos(2.*PI/N));
@@ -557,7 +557,7 @@
 
             const f_max = 20.;
 
-            const NUM_POINTS = 4096;
+            const NUM_POINTS = 8192;
             const positions = [];
             for (let i = 0; i < NUM_POINTS; i++) {
                 const x = f_max * i / NUM_POINTS;
@@ -574,6 +574,7 @@
             const waveBuffer = gl.createBuffer();
             const fftRealBuffer = gl.createBuffer();
             const fftImagBuffer = gl.createBuffer();
+            const axisBuffer = gl.createBuffer();
 
             // Function to generate wave vertices
             function generateWaveVertices() {
@@ -612,10 +613,36 @@
                     // Create vertices for imaginary part
                     const imagVertices = [];
 
-                    NUM_FREQS = 10 * f_max + 3;
+                    NUM_FREQS = 5 * f_max + 3;
 
+                    // Neg freq components
+                    for (let i = NUM_FREQS - 1; i >= 0; i--) {
+                        let x = (NUM_FREQS - i) / (2 * NUM_FREQS);
+
+                        // Get real and imaginary parts
+                        const real = fftResult[i * 2];
+                        const imag = -fftResult[i * 2 + 1];
+
+                        // Normalize magnitude for display
+                        const normalizedReal = real / (NUM_POINTS / 2);
+                        const normalizedImag = imag / (NUM_POINTS / 2);
+
+                        // Transform to screen coordinates
+                        const screen_x = x;
+
+                        // Position real part in top half
+                        const screen_y_real = 0.3 * normalizedReal - 0.2;
+
+                        // Position imaginary part in bottom half
+                        const screen_y_imag = 0.3 * normalizedImag - 0.6;
+
+                        realVertices.push(screen_x, screen_y_real);
+                        imagVertices.push(screen_x, screen_y_imag);
+                    }
+
+                    // Pos freq components
                     for (let i = 0; i < NUM_FREQS; i++) {
-                        const x = i / NUM_FREQS; // Normalize x to [0,1]
+                        let x = (i + NUM_FREQS) / (2 * NUM_FREQS);
 
                         // Get real and imaginary parts
                         const real = fftResult[i * 2];
@@ -629,10 +656,10 @@
                         const screen_x = x;
 
                         // Position real part in top half
-                        const screen_y_real = 0.3 * normalizedReal;
+                        const screen_y_real = 0.3 * normalizedReal - 0.2;
 
                         // Position imaginary part in bottom half
-                        const screen_y_imag = 0.3 * normalizedImag - 0.5;
+                        const screen_y_imag = 0.3 * normalizedImag - 0.6;
 
                         realVertices.push(screen_x, screen_y_real);
                         imagVertices.push(screen_x, screen_y_imag);
@@ -747,6 +774,8 @@
                 winding_f = updateFromInput(this, winding_f_slider, 0, 5, winding_f);
             });
 
+            const axisVertices = new Float32Array([0.5, 0, 0.5, -0.8]);
+
             // Draw function
             function draw(time) {
                 // Clear canvas
@@ -766,12 +795,22 @@
                 gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
                 gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
 
+                // Draw y axis for FFT
+                gl.useProgram(lineProgram);
+                gl.uniform4f(locations["line"]["color"], 1., 1., 1., 1.0); // White
+                gl.uniform1i(locations["line"]["use_viridis"], 0); // Disable viridis coloring
+                gl.bindBuffer(gl.ARRAY_BUFFER, axisBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, axisVertices, gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(locations["line"]["xy"]);
+                gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
+                gl.drawArrays(gl.LINE_STRIP, 0, axisVertices.length / 2);
+
                 // Generate FFT vertices
                 const fftVertices = generateFFTVertices(waveData.yValues);
 
                 // Draw FFT real part
                 gl.useProgram(lineProgram);
-                gl.uniform4f(locations["line"]["color"], 1.0, 1.0, 1.0, 1.0); // White color
+                gl.uniform4f(locations["line"]["color"], 1.0, 0.5, 0.5, 1.0); // Light red
                 gl.uniform1i(locations["line"]["use_viridis"], 0); // Disable viridis coloring
                 gl.bindBuffer(gl.ARRAY_BUFFER, fftRealBuffer);
                 gl.bufferData(gl.ARRAY_BUFFER, fftVertices.real, gl.STATIC_DRAW);
@@ -781,7 +820,7 @@
 
                 // Draw FFT imaginary part
                 gl.useProgram(lineProgram);
-                gl.uniform4f(locations["line"]["color"], 1.0, 0.5, 0.5, 1.0); // Light red color
+                gl.uniform4f(locations["line"]["color"], 0.5, 0.5, 1., 1.0); // Light blue
                 gl.uniform1i(locations["line"]["use_viridis"], 0); // Disable viridis coloring
                 gl.bindBuffer(gl.ARRAY_BUFFER, fftImagBuffer);
                 gl.bufferData(gl.ARRAY_BUFFER, fftVertices.imag, gl.STATIC_DRAW);
