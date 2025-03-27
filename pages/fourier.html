@@ -266,10 +266,10 @@
                 <mo>&#x2009;</mo>
                 <mi>f</mi>
             </math>:
-            <input type="number" id="winding_f_input" min="0" max="5" step="0.1" value="2">
+            <input type="number" id="winding_f_input" min="-5" max="5" step="0.1" value="2">
         </label>
         <div class="slider-container">
-            <input type="range" id="winding_f" min="0" max="5" step="0.1" value="2">
+            <input type="range" style="width: 600px;" id="winding_f" min="-5" max="5" step="0.1" value="2">
         </div>
     </div>
 
@@ -279,6 +279,7 @@
             onRuntimeInitialized: function () {
                 console.log("WebAssembly module is ready!");
                 // Call your functions that use the module here
+                main();
             }
         }
 
@@ -440,7 +441,7 @@
 
                     gl_Position = vec4(screen_x/u_aspect - 0.5, screen_y, 0.0, 1.0);
 
-                    v_color = viridis(x/20.);
+                    v_color = viridis(x/10.);
                 }
             `;
 
@@ -555,7 +556,7 @@
             const positionBuffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-            const f_max = 20.;
+            const f_max = 10.;
 
             const NUM_POINTS = 8192;
             const positions = [];
@@ -574,7 +575,6 @@
             const waveBuffer = gl.createBuffer();
             const fftRealBuffer = gl.createBuffer();
             const fftImagBuffer = gl.createBuffer();
-            const axisBuffer = gl.createBuffer();
 
             // Function to generate wave vertices
             function generateWaveVertices() {
@@ -602,18 +602,15 @@
                 };
             }
 
-            // Function to generate FFT vertices
-            function generateFFTVertices(yValues) {
-                try {
-                    // Perform FFT on the y values
-                    const fftResult = performFFT(yValues);
+            const NUM_FREQS = 5 * f_max + 3;
 
+            // Function to generate FFT vertices
+            function generateFFTVertices(fftResult) {
+                try {
                     // Create vertices for real part
                     const realVertices = [];
                     // Create vertices for imaginary part
                     const imagVertices = [];
-
-                    NUM_FREQS = 5 * f_max + 3;
 
                     // Neg freq components
                     for (let i = NUM_FREQS - 1; i >= 0; i--) {
@@ -771,13 +768,15 @@
                 phase2 = updateFromInput(this, phase2_slider, 0, 359, phase2);
             });
             winding_f_input.addEventListener('input', function () {
-                winding_f = updateFromInput(this, winding_f_slider, 0, 5, winding_f);
+                winding_f = updateFromInput(this, winding_f_slider, -5, 5, winding_f);
             });
 
             const axisVertices = new Float32Array([0.5, 0, 0.5, -0.8]);
 
             // Draw function
             function draw(time) {
+                const aspect = canvas.width / canvas.height;
+
                 // Clear canvas
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
@@ -795,18 +794,9 @@
                 gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
                 gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
 
-                // Draw y axis for FFT
-                gl.useProgram(lineProgram);
-                gl.uniform4f(locations["line"]["color"], 1., 1., 1., 1.0); // White
-                gl.uniform1i(locations["line"]["use_viridis"], 0); // Disable viridis coloring
-                gl.bindBuffer(gl.ARRAY_BUFFER, axisBuffer);
-                gl.bufferData(gl.ARRAY_BUFFER, axisVertices, gl.STATIC_DRAW);
-                gl.enableVertexAttribArray(locations["line"]["xy"]);
-                gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
-                gl.drawArrays(gl.LINE_STRIP, 0, axisVertices.length / 2);
-
                 // Generate FFT vertices
-                const fftVertices = generateFFTVertices(waveData.yValues);
+                const fftResult = performFFT(waveData.yValues);
+                const fftVertices = generateFFTVertices(fftResult);
 
                 // Draw FFT real part
                 gl.useProgram(lineProgram);
@@ -830,7 +820,6 @@
 
                 // Draw winding
                 gl.useProgram(windingProgram);
-                // Update uniforms
                 gl.uniform1f(locations["winding"]["A1"], A1);
                 gl.uniform1f(locations["winding"]["f1"], f1);
                 gl.uniform1f(locations["winding"]["A2"], A2);
@@ -838,15 +827,40 @@
                 gl.uniform1f(locations["winding"]["phase1"], phase1);
                 gl.uniform1f(locations["winding"]["phase2"], phase2);
                 gl.uniform1f(locations["winding"]["winding_f"], winding_f);
-                gl.uniform1f(locations["winding"]["aspect"], canvas.width / canvas.height);
-
-                // Set up position attribute
+                gl.uniform1f(locations["winding"]["aspect"], aspect);
                 gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
                 gl.enableVertexAttribArray(locations["winding"]["position"]);
                 gl.vertexAttribPointer(locations["winding"]["position"], 1, gl.FLOAT, false, 0, 0);
-
-                // Draw line strip (connected line segments for smooth curve)
                 gl.drawArrays(gl.LINE_STRIP, 0, NUM_POINTS);
+
+                let i = Math.round(f_max * winding_f);
+                let real, imag;
+                if (i < 0) {
+                    i = -i;
+                    real = fftResult[2 * i];
+                    imag = -fftResult[2 * i + 1]
+                } else {
+                    real = fftResult[2 * i];
+                    imag = fftResult[2 * i + 1]
+                }
+
+                const x0 = -0.5;
+                const y0 = -0.6 * 0.65;
+                const dx = (2.5 * real / NUM_POINTS) / aspect;
+                const dy = 2.5 * imag / NUM_POINTS;
+                const sumVertices = new Float32Array([x0, y0, x0 + dx, y0 + dy]);
+
+                // Draw some lines
+                for (let lineVertices of [axisVertices, sumVertices]) {
+                    gl.useProgram(lineProgram);
+                    gl.uniform4f(locations["line"]["color"], 1., 1., 1., 1.0); // White
+                    gl.uniform1i(locations["line"]["use_viridis"], 0); // Disable viridis coloring
+                    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, lineVertices, gl.STATIC_DRAW);
+                    gl.enableVertexAttribArray(locations["line"]["xy"]);
+                    gl.vertexAttribPointer(locations["line"]["xy"], 2, gl.FLOAT, false, 0, 0);
+                    gl.drawArrays(gl.LINE_STRIP, 0, lineVertices.length / 2);
+                }
 
                 // Request next frame
                 requestAnimationFrame(draw);
@@ -855,7 +869,6 @@
             // Start animation loop
             requestAnimationFrame(draw);
         }
-        main();
     </script>
 
     <script src="kissfft.js"></script>
