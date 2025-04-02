@@ -1,0 +1,16 @@
+[project]
+name = "rain"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "rasterio",
+    "numpy",
+    "matplotlib",
+    "ipython",
+    "pip",
+    "ipykernel>=6.29.5",
+    "pytest>=8.3.5",
+    "click>=8.1.8",
+]
