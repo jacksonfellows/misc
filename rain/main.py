@@ -5,10 +5,9 @@ import numpy as np
 import flowpath_wrapper
 from matplotlib.animation import FuncAnimation
 import click
+import math
 
-fdr_path = "/Users/jackson/Downloads/HRNHDPlusRasters1711/fdr.tif"
-dem_path = "/Users/jackson/Downloads/HRNHDPlusRasters1711/elev_cm.tif"
-def load_data():
+def load_data(fdr_path, dem_path):
     data = {}
     with rasterio.open(fdr_path) as src:
         data["src"] = src
@@ -24,7 +23,6 @@ def load_data():
 def lat_lon_to_ij(src, lat, lon):
     x, y = rasterio.warp.transform("EPSG:4326", src.crs, [lon], [lat])
     i, j = src.index(x[0], y[0])
-    assert 0 <= i < src.shape[0] and 0 <= j < src.shape[1]
     return i, j
 
 def ij_to_lat_lon(src, i, j):
@@ -89,12 +87,18 @@ def flowpath(fdr, i, j):
     return ii,jj
 
 @click.command()
+@click.option('--fdr-path', required=True, help='Path to the FDR file.')
+@click.option('--dem-path', required=True, help='Path to the DEM file.')
+@click.option('--lat', type=float, required=True, help='Center latitude.')
+@click.option('--lon', type=float, required=True, help='Center longitude.')
+@click.option('--radius-deg', type=float, required=True, help='Radius in degrees.')
 @click.option('--n', default=10, help='Number of paths to generate.')
 @click.option('--decimate', default=10, help="Decimation factor.")
 @click.option('--seed', default=42, help='Random seed.')
-def main(n, decimate, seed):
+@click.option('--fps', default=600)
+def main(fdr_path, dem_path, lat, lon, radius_deg, n, decimate, seed, fps):
     print("Loading data...")
-    data = load_data()
+    data = load_data(fdr_path, dem_path)
     rng = np.random.default_rng(seed)
     plt.gca().set_aspect("equal")
     colori = np.arange(n)
@@ -107,14 +111,18 @@ def main(n, decimate, seed):
 
     # Precompute paths and initialize lines
     for idx in range(n):
-        print(f"Computing path {idx}...")
-        # Find somewhere to start
-        i = rng.integers(0, data["src"].shape[0])
-        j = rng.integers(0, data["src"].shape[1])
-        while data["dem"][i, j] <= 0:
-            i = rng.integers(0, data["src"].shape[0])
-            j = rng.integers(0, data["src"].shape[1])
+        valid_point = False
+        while not valid_point:
+            # Generate random point uniformly in a circle using polar coordinates.
+            theta = rng.uniform(0, 2*math.pi)
+            r = radius_deg * math.sqrt(rng.uniform(0, 1))
+            cand_lat = lat + r * math.sin(theta)
+            cand_lon = lon + r * math.cos(theta)
+            i, j = lat_lon_to_ij(data["src"], cand_lat, cand_lon)
+            if 0 <= i < data["src"].shape[0] and 0 <= j < data["src"].shape[1] and data["dem"][i, j] > 0:
+                valid_point = True
         # Get flowpath
+        print(f"Computing flowpath {idx}...")
         ii, jj = flowpath_wrapper.call_flowpath(data["fdr"], i, j)
         ii, jj = ii[::decimate], jj[::decimate]  # Decimate!
         # Transform to lat,lon coords
@@ -150,7 +158,7 @@ def main(n, decimate, seed):
     total_frames = sum(len(path[0]) for path in paths)
     print(f"Creating animation w/ {total_frames=}...")
     ani = FuncAnimation(fig, update, frames=total_frames, init_func=init, blit=True)
-    ani.save("rain.mov", fps=60*10)
+    ani.save("rain.mov", fps=fps)
 
 if __name__ == "__main__":
     main()
