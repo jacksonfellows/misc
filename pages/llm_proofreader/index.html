@@ -11,6 +11,10 @@
             margin: 20px;
         }
 
+	.user-text {
+	    font-size: 12pt
+	}
+
         textarea {
             width: 100%;
             height: 200px;
@@ -28,7 +32,6 @@
         .diff {
             white-space: pre-wrap;
             margin-top: 20px;
-            /* font-family: monospace; */
         }
 
         .added {
@@ -66,6 +69,20 @@
             text-align: center;
             padding: 20px;
         }
+
+        .prompt-controls {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prompt-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
     </style>
 </head>
 
@@ -83,16 +100,26 @@
     </select>
     <button onclick="pasteFromClipboard()" id="paste-buttom">Paste from Clipboard</button>
 
-    <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+    <textarea id="inputText" class="user-text" placeholder="Paste your text here..."></textarea>
     <button onclick="submitText()">Submit</button>
 
-    <div class="diff" id="outputDiff"></div>
+    <div class="diff user-text" id="outputDiff"></div>
     <div class="spinner-container" id="spinnerContainer" style="display: none;">
         <div class="spinner"></div>
     </div>
 
     <h3>System prompt</h3>
-    <textarea id="systemPrompt" placeholder="Enter system prompt here..."></textarea>
+    <div class="prompt-controls">
+        <label for="promptPreset">Preset:</label>
+        <select id="promptPreset" onchange="loadPreset()"></select>
+        <button onclick="createNewPreset()">New Preset</button>
+    </div>
+    <textarea id="systemPrompt" class="user-text" placeholder="Enter system prompt here..."></textarea>
+    <div class="prompt-actions">
+        <button onclick="savePreset()">Save Changes</button>
+        <button onclick="resetPreset()">Reset to Default</button>
+        <button onclick="deletePreset()">Delete Preset</button>
+    </div>
 
     <script>
         async function pasteFromClipboard() {
@@ -121,11 +148,173 @@
             window.OPENAI_API_KEY = apiKey;
         }
 
-        const defaultPrompt = "You are a diligent proofreader at a scientific journal. Read the given text for typos and clarity. Return an edited version with MINIMAL changes that preserves the meaning of the original text. Use SI units for quantities (s for seconds, km for kilometers, etc.).";
+        // Default system prompts
+        const defaultPresets = {
+            "paper editor": "You are a diligent proofreader at a scientific journal. Read the given text for typos and clarity. Return an edited version with MINIMAL changes that preserves the meaning of the original text. Use SI units for quantities (s for seconds, km for kilometers, etc.)."
+        };
+
+        // Load user presets from localStorage or use defaults
+        function getUserPresets() {
+            const savedPresets = localStorage.getItem('userPresets');
+            return savedPresets ? JSON.parse(savedPresets) : { ...defaultPresets };
+        }
+
+        // Save user presets to localStorage
+        function saveUserPresets(presets) {
+            localStorage.setItem('userPresets', JSON.stringify(presets));
+        }
+
+        // Populate the preset dropdown
+        function populatePresetDropdown() {
+            const presetSelect = document.getElementById('promptPreset');
+            presetSelect.innerHTML = '';
+            
+            const userPresets = getUserPresets();
+            
+            Object.keys(userPresets).forEach(presetName => {
+                const option = document.createElement('option');
+                option.value = presetName;
+                option.textContent = presetName;
+                presetSelect.appendChild(option);
+            });
+        }
+
+        // Load selected preset into the textarea
+        function loadPreset() {
+            const presetName = document.getElementById('promptPreset').value;
+            const userPresets = getUserPresets();
+            
+            if (presetName && userPresets[presetName]) {
+                document.getElementById('systemPrompt').value = userPresets[presetName];
+            }
+        }
+
+        // Save changes to the current preset
+        function savePreset() {
+            const presetName = document.getElementById('promptPreset').value;
+            const promptText = document.getElementById('systemPrompt').value;
+            
+            if (!presetName) return;
+            
+            const userPresets = getUserPresets();
+            userPresets[presetName] = promptText;
+            saveUserPresets(userPresets);
+            
+            alert(`Preset "${presetName}" has been saved.`);
+        }
+
+        // Reset the current preset to its default value (if it exists in defaults)
+        function resetPreset() {
+            const presetName = document.getElementById('promptPreset').value;
+            
+            if (!presetName) return;
+            
+            if (defaultPresets[presetName]) {
+                const userPresets = getUserPresets();
+                userPresets[presetName] = defaultPresets[presetName];
+                saveUserPresets(userPresets);
+                document.getElementById('systemPrompt').value = defaultPresets[presetName];
+                alert(`Preset "${presetName}" has been reset to default.`);
+            } else {
+                alert(`No default exists for "${presetName}".`);
+            }
+        }
+
+        // Delete the current preset
+        function deletePreset() {
+            const presetName = document.getElementById('promptPreset').value;
+            
+            if (!presetName) return;
+            
+            // Don't allow deleting the last preset
+            const userPresets = getUserPresets();
+            if (Object.keys(userPresets).length <= 1) {
+                alert("Cannot delete the last preset.");
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete the preset "${presetName}"?`)) {
+                delete userPresets[presetName];
+                saveUserPresets(userPresets);
+                populatePresetDropdown();
+                
+                // Load the first available preset
+                document.getElementById('promptPreset').selectedIndex = 0;
+                loadPreset();
+                
+                alert(`Preset "${presetName}" has been deleted.`);
+            }
+        }
+
+        // Create a new preset
+        function createNewPreset() {
+            const newName = prompt("Enter a name for the new preset:");
+            
+            if (!newName) return;
+            
+            const userPresets = getUserPresets();
+            
+            if (userPresets[newName]) {
+                alert(`A preset named "${newName}" already exists.`);
+                return;
+            }
+            
+            // Ask if user wants to start with empty preset or current content
+            const useCurrentContent = confirm("Do you want to use the current content as a starting point?\n\nClick 'OK' to use current content.\nClick 'Cancel' for an empty preset.");
+            
+            // Make sure we're actually using an empty string when user clicks Cancel
+            userPresets[newName] = useCurrentContent ? document.getElementById('systemPrompt').value : "";
+            
+            // Immediately update the textarea if the user chose an empty preset
+            if (!useCurrentContent) {
+                document.getElementById('systemPrompt').value = "";
+            }
+            saveUserPresets(userPresets);
+            
+            populatePresetDropdown();
+            
+            // Select the new preset
+            document.getElementById('promptPreset').value = newName;
+            
+            alert(`New preset "${newName}" has been created.`);
+        }
 
         // Initialize system prompt in textarea when page loads
         window.onload = function () {
-            document.getElementById('systemPrompt').value = defaultPrompt;
+            // Populate preset dropdown
+            populatePresetDropdown();
+            
+            // Select "paper editor" preset by default
+            const presetSelect = document.getElementById('promptPreset');
+            presetSelect.value = "paper editor";
+            loadPreset();
+            
+            // Update temperature value display when slider changes
+            document.getElementById('temperature').addEventListener('input', function() {
+                document.getElementById('temperatureValue').textContent = this.value;
+            });
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(event) {
+                // Command+Enter to submit
+                if (event.metaKey && event.key === 'Enter') {
+                    event.preventDefault(); // Prevent default browser behavior
+                    submitText();
+                }
+                
+                // Command+V to paste from clipboard (only when not in textarea/input)
+                if (event.metaKey && event.key === 'v') {
+                    // Get the currently focused element
+                    const activeElement = document.activeElement;
+                    
+                    // Only trigger our custom paste if the user is NOT in a textarea or input field
+                    if (activeElement.tagName !== 'TEXTAREA' && activeElement.tagName !== 'INPUT') {
+                        event.preventDefault(); // Prevent default browser paste behavior
+                        pasteFromClipboard(); // Call the existing paste function
+                    }
+                    // If user is in a textarea/input, let the default paste behavior happen
+                }
+            });
         }
 
         async function submitText() {
